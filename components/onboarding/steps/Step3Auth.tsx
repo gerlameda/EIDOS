@@ -127,15 +127,13 @@ export function Step3Auth() {
           <p className="mt-6 text-center text-sm text-text-muted">{message}</p>
         ) : null}
 
-        {process.env.NODE_ENV === "development" ? (
-          <button
-            type="button"
-            onClick={() => router.push("/onboarding/4")}
-            className="mt-8 w-full rounded-lg border border-dashed border-text-muted/50 py-3 text-sm text-text-muted transition-colors hover:border-accent-cyan/50 hover:text-accent-cyan"
-          >
-            Continuar sin cuenta →
-          </button>
-        ) : null}
+        <button
+          type="button"
+          onClick={() => router.push("/onboarding/4")}
+          className="mt-8 w-full text-center text-xs text-text-muted"
+        >
+          Continuar sin cuenta →
+        </button>
       </div>
     </div>
   );
