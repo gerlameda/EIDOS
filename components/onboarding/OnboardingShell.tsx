@@ -76,7 +76,7 @@ export function OnboardingShell({ step }: { step: number }) {
       return;
     }
     if (step >= 8) {
-      router.push("/dashboard");
+      router.push("/modulo01/capa1");
     } else {
       router.push(`/onboarding/${step + 1}`);
     }

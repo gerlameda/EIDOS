@@ -22,6 +22,17 @@
   }
 }
 
+@keyframes capa1-step {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 :root {
   --background: #0d0d14;
   --foreground: #f0ede8;

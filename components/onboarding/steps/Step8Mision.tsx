@@ -22,7 +22,7 @@ export function Step8Mision() {
   const empezar = useCallback(() => {
     if (!picked) return;
     setArea(picked);
-    router.push("/dashboard");
+    router.push("/modulo01/capa1");
   }, [picked, setArea, router]);
 
   useEffect(() => {
