@@ -112,7 +112,7 @@ function Capa1AvatarFigure({ tier }: { tier: Capa1AvatarTier }) {
   return (
     <svg
       viewBox="0 0 200 280"
-      className="mx-auto h-56 w-44 md:h-64 md:w-48"
+      className="mx-auto h-72 w-56 shrink-0 md:h-80 md:w-64"
       aria-hidden
     >
       <defs>
@@ -470,12 +470,19 @@ export default function Modulo01Capa1Page() {
   };
 
   const renderOutput = () => {
-    const nombreParaAvatar =
-      (typeof window !== "undefined" &&
-        localStorage.getItem(LS_NOMBRE)?.trim()) ||
-      nombreStore.trim() ||
-      "Jugador";
-    const chroniclesName = `${nombreParaAvatar}Chronicles`;
+    let nombreBase = "";
+    if (typeof window !== "undefined") {
+      nombreBase = localStorage.getItem(LS_NOMBRE)?.trim() ?? "";
+    }
+    if (!nombreBase) {
+      nombreBase = nombreStore.trim();
+    }
+    if (!nombreBase) {
+      nombreBase = "Jugador";
+    }
+    const nombreCapitalizado =
+      nombreBase.charAt(0).toUpperCase() + nombreBase.slice(1);
+    const chroniclesName = `${nombreCapitalizado}Chronicles`;
 
     if (!globalNivel || !highlight) {
       return (
@@ -499,7 +506,9 @@ export default function Modulo01Capa1Page() {
 
     return (
       <div className="flex flex-col gap-10" style={transitionStyle}>
-        <Capa1AvatarFigure tier={tier} />
+        <div className="overflow-visible">
+          <Capa1AvatarFigure tier={tier} />
+        </div>
         <div className="text-center">
           <p className="text-2xl font-semibold text-accent-gold md:text-3xl">
             {chroniclesName}
@@ -514,9 +523,6 @@ export default function Modulo01Capa1Page() {
             <p className="text-lg font-semibold text-text-primary">
               {nivelLabel}
             </p>
-            <p className="mt-1 text-xs text-text-muted">
-              Promedio global: {Math.round(globalNivel.promedio)}%
-            </p>
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-text-muted">
@@ -524,9 +530,6 @@ export default function Modulo01Capa1Page() {
             </p>
             <p className="text-lg font-semibold text-text-primary">
               {highlight.label}
-            </p>
-            <p className="mt-1 text-xs text-text-muted">
-              Mayor score: {highlight.score}%
             </p>
           </div>
           <div>
