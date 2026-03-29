@@ -9,8 +9,58 @@ export const CAPA1_RANGO_COLORS: Record<Capa1Rango, string> = {
 export const CAPA1_NIVEL_POR_RANGO: Record<Capa1Rango, string> = {
   bajo: "Despertando",
   medio: "Explorando",
-  alto: "Construcción",
+  alto: "Construyendo",
 };
+
+/** Nivel global del avatar (promedio de scores respondidos). */
+export type Capa1AvatarTier = "low" | "mid" | "high";
+
+export function capa1AvatarTierFromRango(rango: Capa1Rango): Capa1AvatarTier {
+  if (rango === "bajo") return "low";
+  if (rango === "medio") return "mid";
+  return "high";
+}
+
+/** Promedio de todos los scores no nulos; `null` si no hay ninguna área respondida. */
+export function capa1PromedioAnswered(
+  saved: readonly (Capa1AreaAnswer | null)[],
+): number | null {
+  const scores = saved
+    .filter((x): x is Capa1AreaAnswer => x !== null)
+    .map((a) => a.score);
+  if (scores.length === 0) return null;
+  return scores.reduce((s, n) => s + n, 0) / scores.length;
+}
+
+/** Rango global a partir del promedio (mismos cortes 0–40 / 41–70 / 71–100). */
+export function capa1GlobalRangoFromPromedio(promedio: number): Capa1Rango {
+  return capa1RangoFromScore(Math.round(promedio));
+}
+
+export function capa1GlobalNivelFromSaved(saved: readonly (Capa1AreaAnswer | null)[]) {
+  const promedio = capa1PromedioAnswered(saved);
+  if (promedio === null) return null;
+  const rango = capa1GlobalRangoFromPromedio(promedio);
+  return {
+    promedio,
+    rango,
+    nivelLabel: CAPA1_NIVEL_POR_RANGO[rango],
+    tier: capa1AvatarTierFromRango(rango),
+  };
+}
+
+/** Área respondida con mayor score (empate: la primera en orden del mapa). */
+export function capa1HighlightAnswer(
+  saved: readonly (Capa1AreaAnswer | null)[],
+): Capa1AreaAnswer | null {
+  const answered = saved.filter((x): x is Capa1AreaAnswer => x !== null);
+  if (answered.length === 0) return null;
+  let best = answered[0];
+  for (let i = 1; i < answered.length; i++) {
+    if (answered[i].score > best.score) best = answered[i];
+  }
+  return best;
+}
 
 export function capa1RangoFromScore(score: number): Capa1Rango {
   const s = Math.min(100, Math.max(0, Math.round(score)));

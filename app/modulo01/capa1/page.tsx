@@ -1,22 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useOnboardingStore } from "@/store/onboardingStore";
 import {
   CAPA1_AREAS,
-  CAPA1_NIVEL_POR_RANGO,
   CAPA1_RANGO_COLORS,
   type Capa1AreaAnswer,
+  type Capa1AvatarTier,
   type Capa1Rango,
+  capa1GlobalNivelFromSaved,
+  capa1HighlightAnswer,
   capa1InterpolateRespuesta,
   capa1RangoFromScore,
 } from "@/lib/modulo01/capa1-flow-data";
 
 const LS_NOMBRE = "eidos_nombre";
 
-/** 0 intro · 1–5 áreas · 6 elegir avatar · 7 output */
-type ScreenIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+/** 0 intro · 1–5 áreas · 6 output */
+type ScreenIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 function buildAnswer(
   areaIndex: number,
@@ -40,36 +42,221 @@ function buildAnswer(
   };
 }
 
-function Capa1AvatarFigure() {
+type AvatarCfg = {
+  blur: number;
+  core: string;
+  accent: string;
+  gold: string;
+  opacity: number;
+  particleCount: number;
+  pulseDur: string;
+  outerR: number;
+};
+
+const AVATAR_TIER: Record<Capa1AvatarTier, AvatarCfg> = {
+  low: {
+    blur: 16,
+    core: "#EF4444",
+    accent: "#22D3EE",
+    gold: "#C9A84C",
+    opacity: 0.5,
+    particleCount: 4,
+    pulseDur: "4.2s",
+    outerR: 72,
+  },
+  mid: {
+    blur: 11,
+    core: "#F59E0B",
+    accent: "#22D3EE",
+    gold: "#C9A84C",
+    opacity: 0.75,
+    particleCount: 9,
+    pulseDur: "3.2s",
+    outerR: 64,
+  },
+  high: {
+    blur: 6,
+    core: "#22D3EE",
+    accent: "#06B6D4",
+    gold: "#C9A84C",
+    opacity: 1,
+    particleCount: 16,
+    pulseDur: "2.6s",
+    outerR: 56,
+  },
+};
+
+function Capa1AvatarFigure({ tier }: { tier: Capa1AvatarTier }) {
+  const uid = useId().replace(/:/g, "");
+  const cfg = AVATAR_TIER[tier];
+  const particles = useMemo(() => {
+    const n = cfg.particleCount;
+    const out: { cx: number; cy: number; r: number; delay: string }[] = [];
+    for (let i = 0; i < n; i++) {
+      const t = (i / n) * Math.PI * 2 + i * 0.7;
+      const dist = 78 + (i % 3) * 12;
+      out.push({
+        cx: 100 + Math.cos(t) * dist,
+        cy: 118 + Math.sin(t) * (dist * 0.85),
+        r: tier === "high" ? 2 + (i.toString().length % 3) : 1.5 + (i % 2),
+        delay: `${(i * 0.23) % 2}s`,
+      });
+    }
+    return out;
+  }, [cfg.particleCount, tier]);
+
+  const pFill =
+    tier === "high" ? cfg.gold : tier === "mid" ? cfg.accent : cfg.accent;
+  const pFillAlt = tier === "low" ? cfg.core : cfg.gold;
+
   return (
     <svg
-      viewBox="0 0 200 240"
-      className="mx-auto h-48 w-40 text-accent-cyan md:h-56 md:w-44"
+      viewBox="0 0 200 280"
+      className="mx-auto h-56 w-44 md:h-64 md:w-48"
       aria-hidden
     >
       <defs>
-        <linearGradient id="capa1-avatar-glow" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#22D3EE" stopOpacity="0.9" />
-          <stop offset="100%" stopColor="#C9A84C" stopOpacity="0.5" />
-        </linearGradient>
+        <radialGradient id={`capa1-head-${uid}`} cx="50%" cy="32%" r="42%">
+          <stop
+            offset="0%"
+            stopColor={cfg.core}
+            stopOpacity={0.95 * cfg.opacity}
+          />
+          <stop
+            offset="55%"
+            stopColor={cfg.accent}
+            stopOpacity={0.4 * cfg.opacity}
+          />
+          <stop offset="100%" stopColor={cfg.core} stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id={`capa1-torso-${uid}`} cx="50%" cy="54%" r="48%">
+          <stop
+            offset="0%"
+            stopColor={cfg.accent}
+            stopOpacity={0.55 * cfg.opacity}
+          />
+          <stop
+            offset="40%"
+            stopColor={cfg.core}
+            stopOpacity={0.35 * cfg.opacity}
+          />
+          <stop offset="100%" stopColor={cfg.core} stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id={`capa1-orb-${uid}`} cx="50%" cy="48%" r="35%">
+          <stop
+            offset="0%"
+            stopColor="#FFFFFF"
+            stopOpacity={0.25 * cfg.opacity}
+          />
+          <stop
+            offset="45%"
+            stopColor={cfg.core}
+            stopOpacity={0.85 * cfg.opacity}
+          />
+          <stop
+            offset="100%"
+            stopColor={tier === "high" ? cfg.gold : cfg.core}
+            stopOpacity="0"
+          />
+        </radialGradient>
+        <filter
+          id={`capa1-glow-${uid}`}
+          x="-80%"
+          y="-80%"
+          width="260%"
+          height="260%"
+        >
+          <feGaussianBlur
+            in="SourceGraphic"
+            stdDeviation={cfg.blur}
+            result="blurOut"
+          />
+          <feMerge>
+            <feMergeNode in="blurOut" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
       </defs>
-      <circle
-        cx="100"
-        cy="72"
-        r="36"
-        fill="none"
-        stroke="url(#capa1-avatar-glow)"
-        strokeWidth="3"
-        className="animate-pulse"
-      />
-      <path
-        d="M100 112 L100 168 M70 140 L130 140 M100 168 L75 210 M100 168 L125 210"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-      />
-      <circle cx="100" cy="72" r="8" fill="#22D3EE" opacity="0.85" />
+
+      <g filter={`url(#capa1-glow-${uid})`}>
+        <ellipse
+          cx="100"
+          cy="128"
+          rx="56"
+          ry={cfg.outerR}
+          fill={`url(#capa1-torso-${uid})`}
+        >
+          <animate
+            attributeName="opacity"
+            values={`${0.75 * cfg.opacity};${cfg.opacity};${0.75 * cfg.opacity}`}
+            dur={cfg.pulseDur}
+            repeatCount="indefinite"
+          />
+        </ellipse>
+        <ellipse
+          cx="100"
+          cy="78"
+          rx="38"
+          ry="44"
+          fill={`url(#capa1-head-${uid})`}
+        >
+          <animate
+            attributeName="opacity"
+            values={`${0.65 * cfg.opacity};${cfg.opacity};${0.65 * cfg.opacity}`}
+            dur={cfg.pulseDur}
+            begin="0.4s"
+            repeatCount="indefinite"
+          />
+        </ellipse>
+        <circle cx="100" cy="102" r="28" fill={`url(#capa1-orb-${uid})`}>
+          <animate
+            attributeName="r"
+            values={
+              tier === "low"
+                ? "24;30;24"
+                : tier === "mid"
+                  ? "26;34;26"
+                  : "28;36;28"
+            }
+            dur={cfg.pulseDur}
+            repeatCount="indefinite"
+          />
+        </circle>
+      </g>
+
+      <g style={{ opacity: cfg.opacity }}>
+        {particles.map((p, i) => (
+          <circle
+            key={i}
+            cx={p.cx}
+            cy={p.cy}
+            r={p.r}
+            fill={i % 3 === 0 ? pFill : pFillAlt}
+            opacity={tier === "low" ? 0.35 : tier === "mid" ? 0.55 : 0.85}
+          >
+            <animate
+              attributeName="opacity"
+              values={
+                tier === "high"
+                  ? "0.2;1;0.35;0.2"
+                  : tier === "mid"
+                    ? "0.25;0.8;0.25"
+                    : "0.15;0.45;0.15"
+              }
+              dur={tier === "high" ? "2s" : "3.2s"}
+              begin={`${p.delay}`}
+              repeatCount="indefinite"
+            />
+            <animate
+              attributeName="cy"
+              values={`${p.cy};${p.cy - 6};${p.cy}`}
+              dur="3.5s"
+              begin={`${p.delay}`}
+              repeatCount="indefinite"
+            />
+          </circle>
+        ))}
+      </g>
     </svg>
   );
 }
@@ -84,7 +271,6 @@ export default function Modulo01Capa1Page() {
   const [saved, setSaved] = useState<(Capa1AreaAnswer | null)[]>(() =>
     Array.from({ length: CAPA1_AREAS.length }, () => null),
   );
-  const [pickedAreaIndex, setPickedAreaIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -107,21 +293,12 @@ export default function Modulo01Capa1Page() {
     [syncSliderToArea],
   );
 
-  const answeredList = useMemo(() => {
-    return saved
-      .map((ans, idx) => (ans ? { ans, idx } : null))
-      .filter(Boolean) as { ans: Capa1AreaAnswer; idx: number }[];
-  }, [saved]);
-
   const omittedCount = useMemo(
     () => saved.filter((s) => s === null).length,
     [saved],
   );
 
-  const profilePercent = useMemo(
-    () => Math.round(((CAPA1_AREAS.length - omittedCount) / CAPA1_AREAS.length) * 100),
-    [omittedCount],
-  );
+  const answeredCount = CAPA1_AREAS.length - omittedCount;
 
   const currentDef = areaIndex >= 0 ? CAPA1_AREAS[areaIndex] : null;
   const currentRango: Capa1Rango = capa1RangoFromScore(slider);
@@ -136,6 +313,10 @@ export default function Modulo01Capa1Page() {
 
   const startFlow = () => goToArea(0);
 
+  const finishAreas = () => {
+    setScreen(6);
+  };
+
   const continuarArea = () => {
     const ans = buildAnswer(areaIndex, slider);
     setSaved((prev) => {
@@ -146,7 +327,7 @@ export default function Modulo01Capa1Page() {
     if (areaIndex < CAPA1_AREAS.length - 1) {
       goToArea(areaIndex + 1);
     } else {
-      setScreen(6);
+      finishAreas();
     }
   };
 
@@ -159,17 +340,15 @@ export default function Modulo01Capa1Page() {
     if (areaIndex < CAPA1_AREAS.length - 1) {
       goToArea(areaIndex + 1);
     } else {
-      setScreen(6);
+      finishAreas();
     }
   };
 
-  const pickArea = (idx: number) => {
-    setPickedAreaIndex(idx);
-    setScreen(7);
-  };
-
-  const pickedAnswer =
-    pickedAreaIndex !== null ? saved[pickedAreaIndex] : null;
+  const globalNivel = useMemo(
+    () => capa1GlobalNivelFromSaved(saved),
+    [saved],
+  );
+  const highlight = useMemo(() => capa1HighlightAnswer(saved), [saved]);
 
   const renderIntro = () => (
     <div className="flex flex-col gap-8" style={transitionStyle}>
@@ -211,7 +390,9 @@ export default function Modulo01Capa1Page() {
             <span>
               {k}/{CAPA1_AREAS.length}
             </span>
-            <span className="tabular-nums">{Math.round((k / CAPA1_AREAS.length) * 100)}%</span>
+            <span className="tabular-nums">
+              {Math.round((k / CAPA1_AREAS.length) * 100)}%
+            </span>
           </div>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-text-muted/20">
             <div
@@ -254,7 +435,9 @@ export default function Modulo01Capa1Page() {
             />
           </div>
           <div className="flex justify-between gap-4 text-xs leading-snug text-text-muted">
-            <span className="max-w-[45%] text-left">{currentDef.poloIzquierda}</span>
+            <span className="max-w-[45%] text-left">
+              {currentDef.poloIzquierda}
+            </span>
             <span className="max-w-[45%] text-right">{currentDef.poloDerecha}</span>
           </div>
         </div>
@@ -286,52 +469,7 @@ export default function Modulo01Capa1Page() {
     );
   };
 
-  const renderPick = () => (
-    <div className="flex flex-col gap-8" style={transitionStyle}>
-      <div className="text-center">
-        <h2 className="text-xl font-semibold text-text-primary md:text-2xl">
-          Elige tu avatar
-        </h2>
-        <p className="mt-2 text-sm text-text-muted">
-          Toca el área que mejor define tu mapa ahora.
-        </p>
-      </div>
-
-      {answeredList.length === 0 ? (
-        <p className="text-center text-text-muted">
-          No registraste ninguna área. Vuelve atrás con el navegador o reinicia
-          el flujo recargando.
-        </p>
-      ) : (
-        <ul className="flex flex-col gap-3">
-          {answeredList.map(({ ans, idx }) => (
-            <li key={ans.areaId}>
-              <button
-                type="button"
-                onClick={() => pickArea(idx)}
-                className="w-full rounded-xl border border-text-muted/30 bg-bg-base px-4 py-4 text-left transition-colors hover:border-accent-cyan/50 hover:bg-accent-cyan/5"
-              >
-                <p className="font-medium text-text-primary">{ans.label}</p>
-                <p className="mt-1 text-sm text-accent-gold">{ans.atributo}</p>
-                <p className="mt-1 text-xs text-text-muted">Score: {ans.score}%</p>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {omittedCount > 0 ? (
-        <p className="text-center text-sm text-text-muted">
-          {omittedCount} área{omittedCount === 1 ? "" : "s"} omitida
-          {omittedCount === 1 ? "" : "s"} — tu perfil está al {profilePercent}%.
-        </p>
-      ) : null}
-    </div>
-  );
-
   const renderOutput = () => {
-    if (!pickedAnswer || pickedAreaIndex === null) return null;
-    const nivel = CAPA1_NIVEL_POR_RANGO[pickedAnswer.rango];
     const nombreParaAvatar =
       (typeof window !== "undefined" &&
         localStorage.getItem(LS_NOMBRE)?.trim()) ||
@@ -339,9 +477,29 @@ export default function Modulo01Capa1Page() {
       "Jugador";
     const chroniclesName = `${nombreParaAvatar}Chronicles`;
 
+    if (!globalNivel || !highlight) {
+      return (
+        <div className="flex flex-col gap-8" style={transitionStyle}>
+          <p className="text-center text-text-muted">
+            No registraste ninguna área. Recarga la página para empezar de
+            nuevo el mapa.
+          </p>
+          <button
+            type="button"
+            onClick={() => router.push("/dashboard")}
+            className="w-full rounded-lg border border-accent-cyan bg-accent-cyan/10 py-3.5 font-medium text-accent-cyan"
+          >
+            Continuar →
+          </button>
+        </div>
+      );
+    }
+
+    const { nivelLabel, tier } = globalNivel;
+
     return (
       <div className="flex flex-col gap-10" style={transitionStyle}>
-        <Capa1AvatarFigure />
+        <Capa1AvatarFigure tier={tier} />
         <div className="text-center">
           <p className="text-2xl font-semibold text-accent-gold md:text-3xl">
             {chroniclesName}
@@ -353,14 +511,22 @@ export default function Modulo01Capa1Page() {
             <p className="text-xs uppercase tracking-wide text-text-muted">
               Nivel
             </p>
-            <p className="text-lg font-semibold text-text-primary">{nivel}</p>
+            <p className="text-lg font-semibold text-text-primary">
+              {nivelLabel}
+            </p>
+            <p className="mt-1 text-xs text-text-muted">
+              Promedio global: {Math.round(globalNivel.promedio)}%
+            </p>
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-text-muted">
-              Área
+              Área destacada
             </p>
             <p className="text-lg font-semibold text-text-primary">
-              {pickedAnswer.label}
+              {highlight.label}
+            </p>
+            <p className="mt-1 text-xs text-text-muted">
+              Mayor score: {highlight.score}%
             </p>
           </div>
           <div>
@@ -368,19 +534,26 @@ export default function Modulo01Capa1Page() {
               Atributo
             </p>
             <p className="text-lg font-semibold text-accent-gold">
-              {pickedAnswer.atributo}
+              {highlight.atributo}
             </p>
           </div>
         </div>
 
         <p className="text-base leading-relaxed text-text-primary md:text-lg">
-          {pickedAnswer.respuestaCompleta}
+          {highlight.respuestaCompleta}
         </p>
 
         {omittedCount > 0 ? (
-          <p className="rounded-lg border border-accent-gold/30 bg-accent-gold/5 px-4 py-3 text-sm text-text-primary">
-            Tu perfil está incompleto. Puedes completarlo en la próxima sesión.
-          </p>
+          <>
+            <p className="text-center text-sm text-text-muted">
+              {omittedCount} área{omittedCount === 1 ? "" : "s"} omitida
+              {omittedCount === 1 ? "" : "s"} — tu perfil está al{" "}
+              {Math.round((answeredCount / CAPA1_AREAS.length) * 100)}%.
+            </p>
+            <p className="rounded-lg border border-accent-gold/30 bg-accent-gold/5 px-4 py-3 text-sm text-text-primary">
+              Tu perfil está incompleto. Puedes completarlo en la próxima sesión.
+            </p>
+          </>
         ) : null}
 
         <button
@@ -400,8 +573,7 @@ export default function Modulo01Capa1Page() {
         <div key={`${screen}-${areaIndex}`}>
           {screen === 0 && renderIntro()}
           {screen >= 1 && screen <= 5 && renderArea()}
-          {screen === 6 && renderPick()}
-          {screen === 7 && renderOutput()}
+          {screen === 6 && renderOutput()}
         </div>
       </div>
     </main>
