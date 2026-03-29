@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { useCallback, useId, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useOnboardingStore } from "@/store/onboardingStore";
 import {
@@ -15,7 +15,20 @@ import {
   capa1RangoFromScore,
 } from "@/lib/modulo01/capa1-flow-data";
 
-const LS_NOMBRE = "eidos_nombre";
+const ONBOARDING_SESSION_KEY = "eidos-onboarding";
+
+function nombreFromPersistedOnboardingSession(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    const raw = sessionStorage.getItem(ONBOARDING_SESSION_KEY);
+    if (!raw) return "";
+    const parsed = JSON.parse(raw) as { state?: { nombre?: unknown } };
+    const n = parsed?.state?.nombre;
+    return typeof n === "string" ? n.trim() : "";
+  } catch {
+    return "";
+  }
+}
 
 /** 0 intro · 1–5 áreas · 6 output */
 type ScreenIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6;
@@ -272,14 +285,6 @@ export default function Modulo01Capa1Page() {
     Array.from({ length: CAPA1_AREAS.length }, () => null),
   );
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const fromStore = nombreStore.trim();
-    if (fromStore && !localStorage.getItem(LS_NOMBRE)?.trim()) {
-      localStorage.setItem(LS_NOMBRE, fromStore);
-    }
-  }, [nombreStore]);
-
   const syncSliderToArea = useCallback((idx: number) => {
     setAreaIndex(idx);
     setSlider(50);
@@ -470,12 +475,9 @@ export default function Modulo01Capa1Page() {
   };
 
   const renderOutput = () => {
-    let nombreBase = "";
-    if (typeof window !== "undefined") {
-      nombreBase = localStorage.getItem(LS_NOMBRE)?.trim() ?? "";
-    }
+    let nombreBase = nombreStore.trim();
     if (!nombreBase) {
-      nombreBase = nombreStore.trim();
+      nombreBase = nombreFromPersistedOnboardingSession();
     }
     if (!nombreBase) {
       nombreBase = "Jugador";
