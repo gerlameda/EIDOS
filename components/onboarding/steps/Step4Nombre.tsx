@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useOnboardingStore } from "@/store/onboardingStore";
+import {
+  normalizeNombreUsuario,
+  useOnboardingStore,
+} from "@/store/onboardingStore";
 import { useOnboardingNavRegistration } from "@/components/onboarding/onboarding-nav-context";
 
 export function Step4Nombre() {
@@ -13,7 +16,7 @@ export function Step4Nombre() {
   const [value, setValue] = useState(stored);
 
   const continuar = useCallback(() => {
-    const n = value.trim();
+    const n = normalizeNombreUsuario(value);
     if (!n) return;
     setNombre(n);
     router.push("/onboarding/5");
@@ -38,6 +41,7 @@ export function Step4Nombre() {
           autoComplete="name"
           value={value}
           onChange={(e) => setValue(e.target.value)}
+          onBlur={() => setValue((v) => normalizeNombreUsuario(v))}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();

@@ -7,11 +7,31 @@ import { useOnboardingStore } from "@/store/onboardingStore";
 import { useOnboardingNavRegistration } from "@/components/onboarding/onboarding-nav-context";
 
 const OPCIONES: { id: OnboardingNivel; titulo: string; hint: string }[] = [
-  { id: 1, titulo: "Despertando", hint: "empiezo a ver" },
-  { id: 2, titulo: "Explorando", hint: "algo he hecho" },
-  { id: 3, titulo: "Construyendo", hint: "tengo práctica" },
-  { id: 4, titulo: "Dominando", hint: "soy consistente" },
-  { id: 5, titulo: "Final Boss", hint: "vivo desde adentro" },
+  {
+    id: 1,
+    titulo: "Despertando",
+    hint: "apenas estoy cuestionando cómo vivo",
+  },
+  {
+    id: 2,
+    titulo: "Explorando",
+    hint: "me conozco algo pero no tengo claridad total",
+  },
+  {
+    id: 3,
+    titulo: "Construyendo",
+    hint: "tengo bases y estoy trabajando en mí",
+  },
+  {
+    id: 4,
+    titulo: "Dominando",
+    hint: "soy consistente y vivo con intención",
+  },
+  {
+    id: 5,
+    titulo: "Final Boss",
+    hint: "integré mi trabajo interno, vivo desde adentro",
+  },
 ];
 
 export function Step6Nivel() {
@@ -38,7 +58,7 @@ export function Step6Nivel() {
     <div className="flex flex-1 flex-col justify-center">
       <div className="mx-auto w-full max-w-lg">
         <h1 className="text-center text-2xl font-semibold text-text-primary md:text-left md:text-3xl">
-          ¿En qué nivel te encuentras?
+          ¿En qué punto estás en tu camino de autoconocimiento?
         </h1>
 
         <div className="mt-10 space-y-3" role="radiogroup">
@@ -64,9 +84,7 @@ export function Step6Nivel() {
                   <span className="block font-medium text-text-primary">
                     {op.titulo}
                   </span>
-                  <span className="block text-sm text-text-muted">
-                    — {op.hint}
-                  </span>
+                  <span className="block text-sm text-text-muted">{op.hint}</span>
                 </span>
               </label>
             );

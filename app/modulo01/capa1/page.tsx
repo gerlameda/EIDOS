@@ -1,8 +1,11 @@
 "use client";
 
-import { useCallback, useId, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useOnboardingStore } from "@/store/onboardingStore";
+import {
+  normalizeNombreUsuario,
+  useOnboardingStore,
+} from "@/store/onboardingStore";
 import {
   CAPA1_AREAS,
   CAPA1_RANGO_COLORS,
@@ -53,6 +56,99 @@ function buildAnswer(
     atributo,
     respuestaCompleta,
   };
+}
+
+function Capa1TouchSlider({
+  value,
+  onChange,
+  fillColor,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  fillColor: string;
+}) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const dragging = useRef(false);
+  const onChangeRef = useRef(onChange);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  const commitClientX = useCallback((clientX: number) => {
+    const el = trackRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const x = Math.min(rect.right, Math.max(rect.left, clientX));
+    const pct = ((x - rect.left) / rect.width) * 100;
+    onChangeRef.current(Math.round(Math.min(100, Math.max(0, pct))));
+  }, []);
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!dragging.current) return;
+      commitClientX(e.clientX);
+    };
+    const onMouseUp = () => {
+      dragging.current = false;
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (!dragging.current) return;
+      e.preventDefault();
+      const t = e.touches[0];
+      if (t) commitClientX(t.clientX);
+    };
+    const onTouchEnd = () => {
+      dragging.current = false;
+    };
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    window.addEventListener("touchend", onTouchEnd);
+    window.addEventListener("touchcancel", onTouchEnd);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onTouchEnd);
+      window.removeEventListener("touchcancel", onTouchEnd);
+    };
+  }, [commitClientX]);
+
+  const beginDrag = (clientX: number) => {
+    dragging.current = true;
+    commitClientX(clientX);
+  };
+
+  return (
+    <div
+      ref={trackRef}
+      role="slider"
+      tabIndex={0}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={value}
+      aria-label="Valor de 0 a 100"
+      className="relative h-3 w-full cursor-pointer touch-none select-none rounded-full bg-text-muted/25"
+      onMouseDown={(e) => {
+        e.preventDefault();
+        beginDrag(e.clientX);
+      }}
+      onTouchStart={(e) => {
+        const t = e.touches[0];
+        if (t) beginDrag(t.clientX);
+      }}
+    >
+      <div
+        className="pointer-events-none absolute inset-y-0 left-0 rounded-full"
+        style={{ width: `${value}%`, backgroundColor: fillColor }}
+      />
+      <div
+        className="pointer-events-none absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-bg-base shadow-md"
+        style={{ left: `${value}%`, backgroundColor: fillColor }}
+      />
+    </div>
+  );
 }
 
 type AvatarCfg = {
@@ -412,6 +508,10 @@ export default function Modulo01Capa1Page() {
             {currentDef.label}
           </p>
           <p className="mt-1 text-sm text-text-muted">{currentDef.framing}</p>
+          <p className="mt-4 text-sm leading-relaxed text-text-muted md:text-base">
+            Solo tú ves esto. Entre más honesto seas hoy, más preciso será tu
+            mapa — y más útil será lo que EIDOS te muestre.
+          </p>
           <h2 className="mt-4 text-lg font-semibold leading-snug text-text-primary md:text-xl">
             {currentDef.pregunta}
           </h2>
@@ -425,18 +525,10 @@ export default function Modulo01Capa1Page() {
             >
               {slider}%
             </div>
-            <input
-              type="range"
-              min={0}
-              max={100}
+            <Capa1TouchSlider
               value={slider}
-              onChange={(e) => setSlider(Number(e.target.value))}
-              className="h-2 w-full cursor-pointer"
-              style={{ accentColor: rangeColor }}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={slider}
-              aria-label="Valor 0 a 100"
+              onChange={setSlider}
+              fillColor={rangeColor}
             />
           </div>
           <div className="flex justify-between gap-4 text-xs leading-snug text-text-muted">
@@ -482,9 +574,7 @@ export default function Modulo01Capa1Page() {
     if (!nombreBase) {
       nombreBase = "Jugador";
     }
-    const nombreCapitalizado =
-      nombreBase.charAt(0).toUpperCase() + nombreBase.slice(1);
-    const chroniclesName = `${nombreCapitalizado}Chronicles`;
+    const chroniclesName = `${normalizeNombreUsuario(nombreBase)}Chronicles`;
 
     if (!globalNivel || !highlight) {
       return (

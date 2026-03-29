@@ -23,6 +23,13 @@ const clampNivel = (n: number): OnboardingNivel => {
   return x as OnboardingNivel;
 };
 
+/** "jOE"/"JOE" → "Joe" — usar siempre al persistir nombre. */
+export function normalizeNombreUsuario(raw: string): string {
+  const t = raw.trim();
+  if (!t) return "";
+  return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+}
+
 export const useOnboardingStore = create<OnboardingStore>()(
   persist(
     (set) => ({
@@ -31,7 +38,8 @@ export const useOnboardingStore = create<OnboardingStore>()(
       nivel: 1,
       areaPrioritaria: "",
       setStep: (step) => set({ step }),
-      setNombre: (nombre) => set({ nombre }),
+      setNombre: (nombre) =>
+        set({ nombre: normalizeNombreUsuario(nombre) }),
       setNivel: (nivel) => set({ nivel: clampNivel(nivel) }),
       setAreaPrioritaria: (area) => set({ areaPrioritaria: area }),
     }),
