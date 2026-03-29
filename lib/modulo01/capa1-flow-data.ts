@@ -12,6 +12,13 @@ export const CAPA1_NIVEL_POR_RANGO: Record<Capa1Rango, string> = {
   alto: "Construyendo",
 };
 
+/** Atributo global del avatar según el rango del promedio (no por área). */
+export const CAPA1_ATRIBUTO_GLOBAL_POR_RANGO: Record<Capa1Rango, string> = {
+  bajo: "Despertar",
+  medio: "Buscador",
+  alto: "Alquimista",
+};
+
 /** Nivel global del avatar (promedio de scores respondidos). */
 export type Capa1AvatarTier = "low" | "mid" | "high";
 
@@ -45,12 +52,13 @@ export function capa1GlobalNivelFromSaved(saved: readonly (Capa1AreaAnswer | nul
     promedio,
     rango,
     nivelLabel: CAPA1_NIVEL_POR_RANGO[rango],
+    atributoGlobal: CAPA1_ATRIBUTO_GLOBAL_POR_RANGO[rango],
     tier: capa1AvatarTierFromRango(rango),
   };
 }
 
-/** Área respondida con mayor score (empate: la primera en orden del mapa). */
-export function capa1HighlightAnswer(
+/** Área respondida con mayor score (solo para el texto de respuesta en output). */
+export function capa1AnswerWithMaxScore(
   saved: readonly (Capa1AreaAnswer | null)[],
 ): Capa1AreaAnswer | null {
   const answered = saved.filter((x): x is Capa1AreaAnswer => x !== null);
@@ -92,7 +100,7 @@ export const CAPA1_AREAS: readonly Capa1AreaDef[] = [
   {
     id: "personal-mental",
     label: "Personal/Mental",
-    framing: "Ser vs. deber ser",
+    framing: "Ser vs. Deber ser",
     pregunta:
       "¿Tu diálogo interno te impulsa hacia quien quieres ser, o te frena para proteger quien crees que debes ser?",
     poloIzquierda: "Me frena constantemente",
@@ -112,7 +120,7 @@ export const CAPA1_AREAS: readonly Capa1AreaDef[] = [
   {
     id: "fisica-salud",
     label: "Física/Salud",
-    framing: "Aliado vs. peso",
+    framing: "Aliado vs. Peso",
     pregunta:
       "¿Tu cuerpo es un aliado que te da energía para construir lo que quieres, o es un peso que cargas sin atender?",
     poloIzquierda: "Un peso que cargo",
@@ -132,7 +140,7 @@ export const CAPA1_AREAS: readonly Capa1AreaDef[] = [
   {
     id: "financiera",
     label: "Financiera",
-    framing: "Construir vs. consumir",
+    framing: "Construir vs. Consumir",
     pregunta:
       "¿Tu relación con el dinero hoy te está acercando a la libertad que quieres, o estás consumiendo tu futuro sin notarlo?",
     poloIzquierda: "Consumiendo mi futuro",
@@ -152,7 +160,7 @@ export const CAPA1_AREAS: readonly Capa1AreaDef[] = [
   {
     id: "profesional-academica",
     label: "Profesional/Académica",
-    framing: "Lugar correcto vs. lugar eficiente",
+    framing: "Lugar correcto vs. Lugar eficiente",
     pregunta:
       "¿Estás en el lugar correcto — uno que te acerca a quien quieres ser — o solo siendo muy eficiente en el lugar equivocado?",
     poloIzquierda: "Lugar equivocado",
@@ -172,7 +180,7 @@ export const CAPA1_AREAS: readonly Capa1AreaDef[] = [
   {
     id: "social-relaciones",
     label: "Social/Relaciones",
-    framing: "Acercar vs. alejar",
+    framing: "Acercar vs. Alejar",
     pregunta:
       "¿Las personas con las que pasas más tiempo te acercan a quien quieres ser, o te mantienen donde ya estás?",
     poloIzquierda: "Me mantienen donde estoy",

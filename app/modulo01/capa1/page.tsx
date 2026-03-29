@@ -12,8 +12,8 @@ import {
   type Capa1AreaAnswer,
   type Capa1AvatarTier,
   type Capa1Rango,
+  capa1AnswerWithMaxScore,
   capa1GlobalNivelFromSaved,
-  capa1HighlightAnswer,
   capa1InterpolateRespuesta,
   capa1RangoFromScore,
 } from "@/lib/modulo01/capa1-flow-data";
@@ -449,7 +449,10 @@ export default function Modulo01Capa1Page() {
     () => capa1GlobalNivelFromSaved(saved),
     [saved],
   );
-  const highlight = useMemo(() => capa1HighlightAnswer(saved), [saved]);
+  const answerMaxScore = useMemo(
+    () => capa1AnswerWithMaxScore(saved),
+    [saved],
+  );
 
   const renderIntro = () => (
     <div className="flex flex-col gap-8" style={transitionStyle}>
@@ -576,7 +579,7 @@ export default function Modulo01Capa1Page() {
     }
     const chroniclesName = `${normalizeNombreUsuario(nombreBase)}Chronicles`;
 
-    if (!globalNivel || !highlight) {
+    if (!globalNivel || !answerMaxScore) {
       return (
         <div className="flex flex-col gap-8" style={transitionStyle}>
           <p className="text-center text-text-muted">
@@ -594,7 +597,7 @@ export default function Modulo01Capa1Page() {
       );
     }
 
-    const { nivelLabel, tier } = globalNivel;
+    const { nivelLabel, atributoGlobal, tier } = globalNivel;
 
     return (
       <div className="flex flex-col gap-10" style={transitionStyle}>
@@ -618,24 +621,16 @@ export default function Modulo01Capa1Page() {
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-text-muted">
-              Área destacada
-            </p>
-            <p className="text-lg font-semibold text-text-primary">
-              {highlight.label}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-wide text-text-muted">
               Atributo
             </p>
             <p className="text-lg font-semibold text-accent-gold">
-              {highlight.atributo}
+              {atributoGlobal}
             </p>
           </div>
         </div>
 
         <p className="text-base leading-relaxed text-text-primary md:text-lg">
-          {highlight.respuestaCompleta}
+          {answerMaxScore.respuestaCompleta}
         </p>
 
         {omittedCount > 0 ? (
