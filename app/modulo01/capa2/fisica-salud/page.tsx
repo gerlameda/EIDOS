@@ -251,8 +251,8 @@ export default function Capa2FisicaSaludPage() {
           <div className="flex-1 pb-6">
             <SliderQuestion
               question="¿Cómo describes tu relación con lo que consumes y cómo cuidas tu cuerpo?"
-              leftLabel="Soy obsesivo con lo que consumo"
-              rightLabel="No le doy mucha importancia"
+              leftLabel="No le doy mucha importancia"
+              rightLabel="Soy obsesivo con lo que consumo"
               value={p3}
               onChange={setP3}
             />

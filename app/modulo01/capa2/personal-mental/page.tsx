@@ -251,8 +251,8 @@ export default function Capa2PersonalMentalPage() {
           <div className="flex-1 pb-6">
             <SliderQuestion
               question="Cuando tomas una decisión importante, ¿cuánto pesa lo que tú quieres vs lo que piensan los demás?"
-              leftLabel="100% lo que piensan los demás"
-              rightLabel="100% lo que quiero yo"
+              leftLabel="Lo que piensan los demás"
+              rightLabel="Lo que quiero yo"
               value={p3}
               onChange={setP3}
             />

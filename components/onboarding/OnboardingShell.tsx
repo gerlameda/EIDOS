@@ -16,7 +16,7 @@ import { Step6Nivel } from "@/components/onboarding/steps/Step6Nivel";
 import { Step7Disclaimer } from "@/components/onboarding/steps/Step7Disclaimer";
 import { Step8Mision } from "@/components/onboarding/steps/Step8Mision";
 
-const STEPS_WITH_SPACE_HINT = new Set([1, 2, 5]);
+const STEPS_WITH_SPACE_HINT = new Set([1, 2]);
 
 const STEPS = [
   Step1Impacto,
