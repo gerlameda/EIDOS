@@ -10,30 +10,30 @@ export interface AreaScore {
 }
 
 /**
- * Devuelve un array unificado con el score de cada área.
- * Capa 1: score viene de capa1Saved[i].score
- * Capa 2: score viene de capa2Areas[i].percentageScore
- * Orden: primero las 5 de Capa 1, luego las 5 de Capa 2.
+ * Devuelve exactamente 5 áreas — las mismas de CAPA1_AREAS.
+ * Si el área tiene score en capa2Areas, ese reemplaza al de Capa 1.
+ * Si no, usa el score de capa1Saved.
+ * Nunca duplica áreas.
  */
 export function getUnifiedAreaScores(
   capa1Saved: (Capa1AreaAnswer | null)[],
   capa2Areas: Capa2AreaStatus[]
 ): AreaScore[] {
-  const capa1Scores: AreaScore[] = CAPA1_AREAS.map((area, i) => ({
-    areaId: area.id,
-    label: area.label,
-    score: capa1Saved[i]?.score ?? null,
-    source: "capa1" as const,
-  }));
-
-  const capa2Scores: AreaScore[] = capa2Areas.map((area) => ({
-    areaId: area.areaId,
-    label: area.areaId, // reemplazar con label real cuando estén definidas
-    score: area.percentageScore,
-    source: "capa2" as const,
-  }));
-
-  return [...capa1Scores, ...capa2Scores];
+  return CAPA1_AREAS.map((area, i) => {
+    const capa2 = capa2Areas.find((a) => a.areaId === area.id);
+    const score =
+      capa2?.percentageScore != null
+        ? capa2.percentageScore
+        : (capa1Saved[i]?.score ?? null);
+    const source: "capa1" | "capa2" =
+      capa2?.percentageScore != null ? "capa2" : "capa1";
+    return {
+      areaId: area.id,
+      label: area.label,
+      score,
+      source,
+    };
+  });
 }
 
 /**
