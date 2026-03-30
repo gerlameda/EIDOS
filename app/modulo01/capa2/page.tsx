@@ -80,6 +80,7 @@ export default function Modulo01Capa2HubPage() {
 
   const visibles = completadas >= 1 ? AREAS.length : 3;
   const areasMostrar = AREAS.slice(0, visibles);
+  const allCompleted = completadas === AREAS.length;
 
   const titulo = nombre.trim()
     ? `${nombre.trim()}, tu perfil está en construcción.`
@@ -150,7 +151,7 @@ export default function Modulo01Capa2HubPage() {
 
         <button
           type="button"
-          onClick={() => router.push("/dashboard")}
+          onClick={() => router.push(allCompleted ? "/modulo01/cierre" : "/dashboard")}
           className="mt-12 w-full text-center text-sm text-[rgba(240,237,232,0.4)] transition-colors duration-200 hover:text-[rgba(240,237,232,0.55)]"
         >
           Guardar y salir
