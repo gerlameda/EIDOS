@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { Capa1AreaAnswer } from "@/lib/modulo01/capa1-flow-data";
 import type { Capa2AreaStatus } from "@/lib/modulo01/capa2-types";
+import type { CriticalHabit, VisionArea } from "@/types/modulo02";
 
 const CAPA1_SLOT_COUNT = 5;
 
@@ -21,6 +22,8 @@ export interface OnboardingStore {
   /** Respuestas Capa 1 (5 áreas); `null` = omitida. Persistido en sessionStorage. */
   capa1Saved: (Capa1AreaAnswer | null)[];
   capa2Areas: Capa2AreaStatus[];
+  visionAreas: VisionArea[];
+  criticalHabits: CriticalHabit[];
   setStep: (step: number) => void;
   setNombre: (nombre: string) => void;
   setNivel: (nivel: number) => void;
@@ -28,6 +31,8 @@ export interface OnboardingStore {
   setCapa1Saved: (saved: (Capa1AreaAnswer | null)[]) => void;
   setCapa2Areas: (areas: Capa2AreaStatus[]) => void;
   updateCapa2Area: (updated: Capa2AreaStatus) => void;
+  saveVisionArea: (vision: VisionArea) => void;
+  setCriticalHabits: (habits: CriticalHabit[]) => void;
 }
 
 const clampNivel = (n: number): OnboardingNivel => {
@@ -53,6 +58,8 @@ export const useOnboardingStore = create<OnboardingStore>()(
       areaPrioritaria: "",
       capa1Saved: emptyCapa1Saved(),
       capa2Areas: [],
+      visionAreas: [],
+      criticalHabits: [],
       setStep: (step) => set({ step }),
       setNombre: (nombre) =>
         set({ nombre: normalizeNombreUsuario(nombre) }),
@@ -72,6 +79,19 @@ export const useOnboardingStore = create<OnboardingStore>()(
           }
           return { capa2Areas: [...state.capa2Areas, updated] };
         }),
+      saveVisionArea: (vision) =>
+        set((state) => {
+          const exists = state.visionAreas.find((v) => v.area === vision.area);
+          if (exists) {
+            return {
+              visionAreas: state.visionAreas.map((v) =>
+                v.area === vision.area ? vision : v,
+              ),
+            };
+          }
+          return { visionAreas: [...state.visionAreas, vision] };
+        }),
+      setCriticalHabits: (habits) => set({ criticalHabits: habits }),
     }),
     {
       name: "eidos-onboarding",
@@ -89,6 +109,12 @@ export const useOnboardingStore = create<OnboardingStore>()(
           capa2Areas: Array.isArray(p.capa2Areas)
             ? p.capa2Areas
             : currentState.capa2Areas,
+          visionAreas: Array.isArray(p.visionAreas)
+            ? p.visionAreas
+            : currentState.visionAreas,
+          criticalHabits: Array.isArray(p.criticalHabits)
+            ? p.criticalHabits
+            : currentState.criticalHabits,
         };
       },
       partialize: (state) => ({
@@ -97,6 +123,8 @@ export const useOnboardingStore = create<OnboardingStore>()(
         areaPrioritaria: state.areaPrioritaria,
         capa1Saved: state.capa1Saved,
         capa2Areas: state.capa2Areas,
+        visionAreas: state.visionAreas,
+        criticalHabits: state.criticalHabits,
       }),
     },
   ),
