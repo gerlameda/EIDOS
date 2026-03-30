@@ -41,7 +41,7 @@ export function Scale1to5Question({
               >
                 {value}
               </button>
-              <span className="line-clamp-2 max-w-[4.5rem] text-center text-[10px] leading-tight text-[rgba(240,237,232,0.5)] sm:max-w-none sm:text-xs">
+              <span className="w-full text-center text-[10px] leading-tight text-[rgba(240,237,232,0.5)] sm:text-xs">
                 {labels[i]}
               </span>
             </div>
