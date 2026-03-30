@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { EidosAvatar } from "@/components/avatar/EidosAvatar";
 import {
   normalizeNombreUsuario,
   useOnboardingStore,
@@ -10,7 +11,6 @@ import {
   CAPA1_AREAS,
   CAPA1_RANGO_COLORS,
   type Capa1AreaAnswer,
-  type Capa1AvatarTier,
   type Capa1Rango,
   capa1AnswerWithMaxScore,
   capa1GlobalNivelFromSaved,
@@ -151,235 +151,15 @@ function Capa1TouchSlider({
   );
 }
 
-type AvatarCfg = {
-  blur: number;
-  core: string;
-  accent: string;
-  gold: string;
-  opacity: number;
-  particleCount: number;
-  pulseDur: string;
-  outerR: number;
-};
-
-const AVATAR_TIER: Record<Capa1AvatarTier, AvatarCfg> = {
-  low: {
-    blur: 16,
-    core: "#EF4444",
-    accent: "#22D3EE",
-    gold: "#C9A84C",
-    opacity: 0.5,
-    particleCount: 4,
-    pulseDur: "4.2s",
-    outerR: 72,
-  },
-  mid: {
-    blur: 11,
-    core: "#F59E0B",
-    accent: "#22D3EE",
-    gold: "#C9A84C",
-    opacity: 0.75,
-    particleCount: 9,
-    pulseDur: "3.2s",
-    outerR: 64,
-  },
-  high: {
-    blur: 6,
-    core: "#22D3EE",
-    accent: "#06B6D4",
-    gold: "#C9A84C",
-    opacity: 1,
-    particleCount: 16,
-    pulseDur: "2.6s",
-    outerR: 56,
-  },
-};
-
-function Capa1AvatarFigure({ tier }: { tier: Capa1AvatarTier }) {
-  const uid = useId().replace(/:/g, "");
-  const cfg = AVATAR_TIER[tier];
-  const particles = useMemo(() => {
-    const n = cfg.particleCount;
-    const out: { cx: number; cy: number; r: number; delay: string }[] = [];
-    for (let i = 0; i < n; i++) {
-      const t = (i / n) * Math.PI * 2 + i * 0.7;
-      const dist = 78 + (i % 3) * 12;
-      out.push({
-        cx: 100 + Math.cos(t) * dist,
-        cy: 118 + Math.sin(t) * (dist * 0.85),
-        r: tier === "high" ? 2 + (i.toString().length % 3) : 1.5 + (i % 2),
-        delay: `${(i * 0.23) % 2}s`,
-      });
-    }
-    return out;
-  }, [cfg.particleCount, tier]);
-
-  const pFill =
-    tier === "high" ? cfg.gold : tier === "mid" ? cfg.accent : cfg.accent;
-  const pFillAlt = tier === "low" ? cfg.core : cfg.gold;
-
-  return (
-    <svg
-      viewBox="0 0 200 280"
-      className="mx-auto h-72 w-56 shrink-0 md:h-80 md:w-64"
-      aria-hidden
-    >
-      <defs>
-        <radialGradient id={`capa1-head-${uid}`} cx="50%" cy="32%" r="42%">
-          <stop
-            offset="0%"
-            stopColor={cfg.core}
-            stopOpacity={0.95 * cfg.opacity}
-          />
-          <stop
-            offset="55%"
-            stopColor={cfg.accent}
-            stopOpacity={0.4 * cfg.opacity}
-          />
-          <stop offset="100%" stopColor={cfg.core} stopOpacity="0" />
-        </radialGradient>
-        <radialGradient id={`capa1-torso-${uid}`} cx="50%" cy="54%" r="48%">
-          <stop
-            offset="0%"
-            stopColor={cfg.accent}
-            stopOpacity={0.55 * cfg.opacity}
-          />
-          <stop
-            offset="40%"
-            stopColor={cfg.core}
-            stopOpacity={0.35 * cfg.opacity}
-          />
-          <stop offset="100%" stopColor={cfg.core} stopOpacity="0" />
-        </radialGradient>
-        <radialGradient id={`capa1-orb-${uid}`} cx="50%" cy="48%" r="35%">
-          <stop
-            offset="0%"
-            stopColor="#FFFFFF"
-            stopOpacity={0.25 * cfg.opacity}
-          />
-          <stop
-            offset="45%"
-            stopColor={cfg.core}
-            stopOpacity={0.85 * cfg.opacity}
-          />
-          <stop
-            offset="100%"
-            stopColor={tier === "high" ? cfg.gold : cfg.core}
-            stopOpacity="0"
-          />
-        </radialGradient>
-        <filter
-          id={`capa1-glow-${uid}`}
-          x="-80%"
-          y="-80%"
-          width="260%"
-          height="260%"
-        >
-          <feGaussianBlur
-            in="SourceGraphic"
-            stdDeviation={cfg.blur}
-            result="blurOut"
-          />
-          <feMerge>
-            <feMergeNode in="blurOut" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
-
-      <g filter={`url(#capa1-glow-${uid})`}>
-        <ellipse
-          cx="100"
-          cy="128"
-          rx="56"
-          ry={cfg.outerR}
-          fill={`url(#capa1-torso-${uid})`}
-        >
-          <animate
-            attributeName="opacity"
-            values={`${0.75 * cfg.opacity};${cfg.opacity};${0.75 * cfg.opacity}`}
-            dur={cfg.pulseDur}
-            repeatCount="indefinite"
-          />
-        </ellipse>
-        <ellipse
-          cx="100"
-          cy="78"
-          rx="38"
-          ry="44"
-          fill={`url(#capa1-head-${uid})`}
-        >
-          <animate
-            attributeName="opacity"
-            values={`${0.65 * cfg.opacity};${cfg.opacity};${0.65 * cfg.opacity}`}
-            dur={cfg.pulseDur}
-            begin="0.4s"
-            repeatCount="indefinite"
-          />
-        </ellipse>
-        <circle cx="100" cy="102" r="28" fill={`url(#capa1-orb-${uid})`}>
-          <animate
-            attributeName="r"
-            values={
-              tier === "low"
-                ? "24;30;24"
-                : tier === "mid"
-                  ? "26;34;26"
-                  : "28;36;28"
-            }
-            dur={cfg.pulseDur}
-            repeatCount="indefinite"
-          />
-        </circle>
-      </g>
-
-      <g style={{ opacity: cfg.opacity }}>
-        {particles.map((p, i) => (
-          <circle
-            key={i}
-            cx={p.cx}
-            cy={p.cy}
-            r={p.r}
-            fill={i % 3 === 0 ? pFill : pFillAlt}
-            opacity={tier === "low" ? 0.35 : tier === "mid" ? 0.55 : 0.85}
-          >
-            <animate
-              attributeName="opacity"
-              values={
-                tier === "high"
-                  ? "0.2;1;0.35;0.2"
-                  : tier === "mid"
-                    ? "0.25;0.8;0.25"
-                    : "0.15;0.45;0.15"
-              }
-              dur={tier === "high" ? "2s" : "3.2s"}
-              begin={`${p.delay}`}
-              repeatCount="indefinite"
-            />
-            <animate
-              attributeName="cy"
-              values={`${p.cy};${p.cy - 6};${p.cy}`}
-              dur="3.5s"
-              begin={`${p.delay}`}
-              repeatCount="indefinite"
-            />
-          </circle>
-        ))}
-      </g>
-    </svg>
-  );
-}
-
 export default function Modulo01Capa1Page() {
   const router = useRouter();
   const nombreStore = useOnboardingStore((s) => s.nombre);
+  const capa1Saved = useOnboardingStore((s) => s.capa1Saved);
+  const setCapa1Saved = useOnboardingStore((s) => s.setCapa1Saved);
 
   const [screen, setScreen] = useState<ScreenIndex>(0);
   const [areaIndex, setAreaIndex] = useState(0);
   const [slider, setSlider] = useState(50);
-  const [saved, setSaved] = useState<(Capa1AreaAnswer | null)[]>(() =>
-    Array.from({ length: CAPA1_AREAS.length }, () => null),
-  );
 
   const syncSliderToArea = useCallback((idx: number) => {
     setAreaIndex(idx);
@@ -395,8 +175,8 @@ export default function Modulo01Capa1Page() {
   );
 
   const omittedCount = useMemo(
-    () => saved.filter((s) => s === null).length,
-    [saved],
+    () => capa1Saved.filter((a) => a === null).length,
+    [capa1Saved],
   );
 
   const answeredCount = CAPA1_AREAS.length - omittedCount;
@@ -420,11 +200,12 @@ export default function Modulo01Capa1Page() {
 
   const continuarArea = () => {
     const ans = buildAnswer(areaIndex, slider);
-    setSaved((prev) => {
-      const next = [...prev];
-      next[areaIndex] = ans;
-      return next;
-    });
+    if (!ans) return;
+    setCapa1Saved(
+      useOnboardingStore.getState().capa1Saved.map((x, j) =>
+        j === areaIndex ? ans : x,
+      ),
+    );
     if (areaIndex < CAPA1_AREAS.length - 1) {
       goToArea(areaIndex + 1);
     } else {
@@ -433,11 +214,11 @@ export default function Modulo01Capa1Page() {
   };
 
   const omitirArea = () => {
-    setSaved((prev) => {
-      const next = [...prev];
-      next[areaIndex] = null;
-      return next;
-    });
+    setCapa1Saved(
+      useOnboardingStore.getState().capa1Saved.map((x, j) =>
+        j === areaIndex ? null : x,
+      ),
+    );
     if (areaIndex < CAPA1_AREAS.length - 1) {
       goToArea(areaIndex + 1);
     } else {
@@ -446,12 +227,12 @@ export default function Modulo01Capa1Page() {
   };
 
   const globalNivel = useMemo(
-    () => capa1GlobalNivelFromSaved(saved),
-    [saved],
+    () => capa1GlobalNivelFromSaved(capa1Saved),
+    [capa1Saved],
   );
   const answerMaxScore = useMemo(
-    () => capa1AnswerWithMaxScore(saved),
-    [saved],
+    () => capa1AnswerWithMaxScore(capa1Saved),
+    [capa1Saved],
   );
 
   const renderIntro = () => (
@@ -602,7 +383,7 @@ export default function Modulo01Capa1Page() {
     return (
       <div className="flex flex-col gap-10" style={transitionStyle}>
         <div className="overflow-visible">
-          <Capa1AvatarFigure tier={tier} />
+          <EidosAvatar tier={tier} />
         </div>
         <div className="text-center">
           <p className="text-2xl font-semibold text-accent-gold md:text-3xl">
