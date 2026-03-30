@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { Capa1AreaAnswer } from "@/lib/modulo01/capa1-flow-data";
+import type { Capa2AreaStatus } from "@/lib/modulo01/capa2-types";
 
 const CAPA1_SLOT_COUNT = 5;
 
@@ -19,11 +20,14 @@ export interface OnboardingStore {
   areaPrioritaria: string;
   /** Respuestas Capa 1 (5 áreas); `null` = omitida. Persistido en sessionStorage. */
   capa1Saved: (Capa1AreaAnswer | null)[];
+  capa2Areas: Capa2AreaStatus[];
   setStep: (step: number) => void;
   setNombre: (nombre: string) => void;
   setNivel: (nivel: number) => void;
   setAreaPrioritaria: (area: string) => void;
   setCapa1Saved: (saved: (Capa1AreaAnswer | null)[]) => void;
+  setCapa2Areas: (areas: Capa2AreaStatus[]) => void;
+  updateCapa2Area: (updated: Capa2AreaStatus) => void;
 }
 
 const clampNivel = (n: number): OnboardingNivel => {
@@ -48,12 +52,26 @@ export const useOnboardingStore = create<OnboardingStore>()(
       nivel: 1,
       areaPrioritaria: "",
       capa1Saved: emptyCapa1Saved(),
+      capa2Areas: [],
       setStep: (step) => set({ step }),
       setNombre: (nombre) =>
         set({ nombre: normalizeNombreUsuario(nombre) }),
       setNivel: (nivel) => set({ nivel: clampNivel(nivel) }),
       setAreaPrioritaria: (area) => set({ areaPrioritaria: area }),
       setCapa1Saved: (saved) => set({ capa1Saved: saved }),
+      setCapa2Areas: (areas) => set({ capa2Areas: areas }),
+      updateCapa2Area: (updated) =>
+        set((state) => {
+          const exists = state.capa2Areas.find((a) => a.areaId === updated.areaId);
+          if (exists) {
+            return {
+              capa2Areas: state.capa2Areas.map((a) =>
+                a.areaId === updated.areaId ? updated : a,
+              ),
+            };
+          }
+          return { capa2Areas: [...state.capa2Areas, updated] };
+        }),
     }),
     {
       name: "eidos-onboarding",
@@ -68,6 +86,9 @@ export const useOnboardingStore = create<OnboardingStore>()(
             p.capa1Saved.length === CAPA1_SLOT_COUNT
               ? p.capa1Saved
               : currentState.capa1Saved,
+          capa2Areas: Array.isArray(p.capa2Areas)
+            ? p.capa2Areas
+            : currentState.capa2Areas,
         };
       },
       partialize: (state) => ({
@@ -75,6 +96,7 @@ export const useOnboardingStore = create<OnboardingStore>()(
         nivel: state.nivel,
         areaPrioritaria: state.areaPrioritaria,
         capa1Saved: state.capa1Saved,
+        capa2Areas: state.capa2Areas,
       }),
     },
   ),
