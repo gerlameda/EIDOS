@@ -54,7 +54,7 @@ export async function saveProfileToSupabase(
 ): Promise<void> {
   const supabase = createClient();
 
-  await supabase.from("eidos_profiles").upsert(
+  const { error } = await supabase.from("eidos_profiles").upsert(
     {
       id: userId,
       nombre: state.nombre,
