@@ -5,11 +5,63 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import type { Capa1AreaAnswer } from "@/lib/modulo01/capa1-flow-data";
 import type { Capa2AreaStatus } from "@/lib/modulo01/capa2-types";
 import type { CriticalHabit, VisionArea } from "@/types/modulo02";
+import type {
+  Manifiesto,
+  RutinaBase,
+  SprintCommitment,
+} from "@/types/modulo03";
 
 const CAPA1_SLOT_COUNT = 5;
 
 function emptyCapa1Saved(): (Capa1AreaAnswer | null)[] {
   return Array.from({ length: CAPA1_SLOT_COUNT }, () => null);
+}
+
+function isValidManifiesto(m: unknown): m is Manifiesto {
+  if (!m || typeof m !== "object") return false;
+  const o = m as Manifiesto;
+  if (typeof o.createdAt !== "string") return false;
+  if (!Array.isArray(o.lines) || o.lines.length !== 3) return false;
+  return o.lines.every((l) => typeof l === "string");
+}
+
+function isValidRutinaBlock(b: unknown): b is {
+  timeOfDay: string;
+  habits: string[];
+} {
+  if (!b || typeof b !== "object") return false;
+  const o = b as { timeOfDay?: unknown; habits?: unknown };
+  return (
+    typeof o.timeOfDay === "string" && Array.isArray(o.habits) &&
+    o.habits.every((h) => typeof h === "string")
+  );
+}
+
+function isValidRutinaBase(r: unknown): r is RutinaBase {
+  if (!r || typeof r !== "object") return false;
+  const o = r as RutinaBase;
+  return (
+    isValidRutinaBlock(o.manana) &&
+    isValidRutinaBlock(o.tarde) &&
+    isValidRutinaBlock(o.noche)
+  );
+}
+
+function isValidSprintCommitment(c: unknown): c is SprintCommitment {
+  if (!c || typeof c !== "object") return false;
+  const o = c as SprintCommitment;
+  const okP =
+    o.habitPriority === 1 ||
+    o.habitPriority === 2 ||
+    o.habitPriority === 3;
+  return (
+    okP &&
+    typeof o.area === "string" &&
+    typeof o.habit === "string" &&
+    typeof o.commitment === "string" &&
+    Array.isArray(o.days) &&
+    typeof o.timeOfDay === "string"
+  );
 }
 
 export type OnboardingNivel = 1 | 2 | 3 | 4 | 5;
@@ -24,6 +76,10 @@ export interface OnboardingStore {
   capa2Areas: Capa2AreaStatus[];
   visionAreas: VisionArea[];
   criticalHabits: CriticalHabit[];
+  manifiesto: Manifiesto | null;
+  rutinaBase: RutinaBase | null;
+  sprintCommitments: SprintCommitment[];
+  modulo03Completed: boolean;
   setStep: (step: number) => void;
   setNombre: (nombre: string) => void;
   setNivel: (nivel: number) => void;
@@ -33,6 +89,10 @@ export interface OnboardingStore {
   updateCapa2Area: (updated: Capa2AreaStatus) => void;
   saveVisionArea: (vision: VisionArea) => void;
   setCriticalHabits: (habits: CriticalHabit[]) => void;
+  saveManifiesto: (manifiesto: Manifiesto) => void;
+  saveRutinaBase: (rutina: RutinaBase) => void;
+  saveSprintCommitment: (commitment: SprintCommitment) => void;
+  completeModulo03: () => void;
 }
 
 const clampNivel = (n: number): OnboardingNivel => {
@@ -60,6 +120,10 @@ export const useOnboardingStore = create<OnboardingStore>()(
       capa2Areas: [],
       visionAreas: [],
       criticalHabits: [],
+      manifiesto: null,
+      rutinaBase: null,
+      sprintCommitments: [],
+      modulo03Completed: false,
       setStep: (step) => set({ step }),
       setNombre: (nombre) =>
         set({ nombre: normalizeNombreUsuario(nombre) }),
@@ -92,6 +156,19 @@ export const useOnboardingStore = create<OnboardingStore>()(
           return { visionAreas: [...state.visionAreas, vision] };
         }),
       setCriticalHabits: (habits) => set({ criticalHabits: habits }),
+      saveManifiesto: (manifiesto) => set({ manifiesto }),
+      saveRutinaBase: (rutina) => set({ rutinaBase: rutina }),
+      saveSprintCommitment: (commitment) =>
+        set((state) => {
+          const others = state.sprintCommitments.filter(
+            (c) => c.habitPriority !== commitment.habitPriority,
+          );
+          const sprintCommitments = [...others, commitment].sort(
+            (a, b) => a.habitPriority - b.habitPriority,
+          );
+          return { sprintCommitments };
+        }),
+      completeModulo03: () => set({ modulo03Completed: true }),
     }),
     {
       name: "eidos-onboarding",
@@ -115,6 +192,35 @@ export const useOnboardingStore = create<OnboardingStore>()(
           criticalHabits: Array.isArray(p.criticalHabits)
             ? p.criticalHabits
             : currentState.criticalHabits,
+          manifiesto:
+            p.manifiesto === undefined
+              ? currentState.manifiesto
+              : p.manifiesto === null
+                ? null
+                : isValidManifiesto(p.manifiesto)
+                  ? p.manifiesto
+                  : currentState.manifiesto,
+          rutinaBase:
+            p.rutinaBase === undefined
+              ? currentState.rutinaBase
+              : p.rutinaBase === null
+                ? null
+                : isValidRutinaBase(p.rutinaBase)
+                  ? p.rutinaBase
+                  : currentState.rutinaBase,
+          sprintCommitments:
+            p.sprintCommitments === undefined
+              ? currentState.sprintCommitments
+              : Array.isArray(p.sprintCommitments) &&
+                  p.sprintCommitments.every(isValidSprintCommitment)
+                ? p.sprintCommitments
+                : currentState.sprintCommitments,
+          modulo03Completed:
+            p.modulo03Completed === undefined
+              ? currentState.modulo03Completed
+              : typeof p.modulo03Completed === "boolean"
+                ? p.modulo03Completed
+                : currentState.modulo03Completed,
         };
       },
       partialize: (state) => ({
@@ -125,6 +231,10 @@ export const useOnboardingStore = create<OnboardingStore>()(
         capa2Areas: state.capa2Areas,
         visionAreas: state.visionAreas,
         criticalHabits: state.criticalHabits,
+        manifiesto: state.manifiesto,
+        rutinaBase: state.rutinaBase,
+        sprintCommitments: state.sprintCommitments,
+        modulo03Completed: state.modulo03Completed,
       }),
     },
   ),
