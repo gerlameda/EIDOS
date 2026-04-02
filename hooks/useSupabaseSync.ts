@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import type { AuthChangeEvent, Session } from "@supabase/auth-js";
 import { createClient } from "@/lib/supabase/client";
 import {
   loadProfileFromSupabase,
@@ -30,23 +31,28 @@ export function useSupabaseSync() {
       scheduleSave();
     });
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session?.user) return;
-      userId = session.user.id;
-      const profile = await loadProfileFromSupabase(session.user.id);
-      if (profile) useOnboardingStore.setState(profile);
-    });
+    supabase.auth.getSession().then(
+      async ({ data }: { data: { session: Session | null } }) => {
+        const { session } = data;
+        if (!session?.user) return;
+        userId = session.user.id;
+        const profile = await loadProfileFromSupabase(session.user.id);
+        if (profile) useOnboardingStore.setState(profile);
+      },
+    );
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange(
+      async (event: AuthChangeEvent, session: Session | null) => {
       if (event === "SIGNED_IN" && session?.user) {
         userId = session.user.id;
         const profile = await loadProfileFromSupabase(session.user.id);
         if (profile) useOnboardingStore.setState(profile);
       }
       if (event === "SIGNED_OUT") userId = null;
-    });
+      },
+    );
 
     return () => {
       unsubscribe();
