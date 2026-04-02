@@ -1,5 +1,10 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import type { Boss } from "@/types/boss";
+
+function bossClient(supabase?: SupabaseClient) {
+  return supabase ?? createClient();
+}
 
 function rowToBoss(row: Record<string, unknown>): Boss {
   return {
@@ -23,9 +28,12 @@ function rowToBoss(row: Record<string, unknown>): Boss {
   };
 }
 
-export async function loadActiveBoss(userId: string): Promise<Boss | null> {
-  const supabase = createClient();
-  const { data, error } = await supabase
+export async function loadActiveBoss(
+  userId: string,
+  supabase?: SupabaseClient,
+): Promise<Boss | null> {
+  const client = bossClient(supabase);
+  const { data, error } = await client
     .from("eidos_bosses")
     .select("*")
     .eq("user_id", userId)
@@ -71,12 +79,13 @@ export async function registerAttack(
 export async function getAttacksToday(
   userId: string,
   todayDate: string,
+  supabase?: SupabaseClient,
 ): Promise<string[]> {
-  const supabase = createClient();
+  const client = bossClient(supabase);
   const startOfDay = `${todayDate}T00:00:00.000Z`;
   const endOfDay = `${todayDate}T23:59:59.999Z`;
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("eidos_boss_attacks")
     .select("mission_key")
     .eq("user_id", userId)
