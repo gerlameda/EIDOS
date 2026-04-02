@@ -8,6 +8,7 @@ import {
   saveProfileToSupabase,
 } from "@/lib/supabase/profile";
 import { useOnboardingStore } from "@/store/onboardingStore";
+import type { OnboardingStore } from "@/store/onboardingStore";
 
 export function useSupabaseSync() {
   useEffect(() => {
@@ -47,8 +48,30 @@ export function useSupabaseSync() {
       async (event: AuthChangeEvent, session: Session | null) => {
       if (event === "SIGNED_IN" && session?.user) {
         userId = session.user.id;
+
+        // Restaurar estado temporal guardado antes de enviar el magic link.
+        const pending = localStorage.getItem("eidos-pending-save");
+        if (pending) {
+          try {
+            const pendingState = JSON.parse(pending) as Partial<OnboardingStore>;
+            useOnboardingStore.setState(pendingState);
+            localStorage.removeItem("eidos-pending-save");
+          } catch (e) {
+            console.error("[EIDOS] error parsing pending state:", e);
+          }
+        }
+
+        // Guarda inmediatamente el estado completo del onboarding.
+        await saveProfileToSupabase(
+          session.user.id,
+          useOnboardingStore.getState(),
+        );
+
+        // Luego carga por si había datos previos en Supabase.
         const profile = await loadProfileFromSupabase(session.user.id);
-        if (profile) useOnboardingStore.setState(profile);
+        if (profile && profile.modulo03Completed) {
+          useOnboardingStore.setState(profile);
+        }
       }
       if (event === "SIGNED_OUT") userId = null;
       },

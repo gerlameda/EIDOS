@@ -1,13 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PROTECTED_PREFIXES = [
-  "/modulo01",
-  "/modulo02",
-  "/modulo03",
-  "/modulo04",
-  "/perfil",
-];
+const PROTECTED_PREFIXES: string[] = [];
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });

@@ -8,6 +8,7 @@ import { AREA_LABELS, AREA_ORDER } from "@/lib/modulo02/areas";
 import { capa1GlobalNivelFromSaved } from "@/lib/modulo01/capa1-flow-data";
 import { useOnboardingStore } from "@/store/onboardingStore";
 import type { DayOfWeek } from "@/types/modulo03";
+import { SaveProfilePrompt } from "@/components/SaveProfilePrompt";
 
 const DAY_SHORT: Record<DayOfWeek, string> = {
   lun: "L",
@@ -47,10 +48,15 @@ export default function Modulo03CierrePage() {
     sprint: false,
     avatar: false,
     cta: false,
+    savePrompt: false,
   });
 
   useEffect(() => {
-    if (!modulo03Completed) {
+    const hasPendingSave =
+      typeof window !== "undefined" &&
+      localStorage.getItem("eidos-pending-save") !== null;
+
+    if (!modulo03Completed && !hasPendingSave) {
       router.replace("/modulo03");
     }
   }, [modulo03Completed, router]);
@@ -69,6 +75,7 @@ export default function Modulo03CierrePage() {
       setTimeout(() => setVisible((v) => ({ ...v, sprint: true })), 2000),
       setTimeout(() => setVisible((v) => ({ ...v, avatar: true })), 2800),
       setTimeout(() => setVisible((v) => ({ ...v, cta: true })), 3400),
+      setTimeout(() => setVisible((v) => ({ ...v, savePrompt: true })), 3600),
     ];
     return () => timers.forEach(clearTimeout);
   }, []);
@@ -231,6 +238,11 @@ export default function Modulo03CierrePage() {
             Ver mi perfil completo
           </button>
         </footer>
+
+        <SaveProfilePrompt
+          visible={visible.savePrompt}
+          onDismiss={() => setVisible((v) => ({ ...v, savePrompt: false }))}
+        />
       </div>
     </main>
   );
