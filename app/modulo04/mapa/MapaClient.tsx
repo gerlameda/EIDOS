@@ -165,7 +165,7 @@ export default function MapaClient({
             })}
 
             {AREA_ORDER.map((key) => {
-              const { svgX: cx, svgY: cy, bioma } = AREA_CONFIG[key];
+              const { svgX: cx, svgY: cy } = AREA_CONFIG[key];
               const score = scoreForArea(unifiedScores, key);
               const st = getAreaState(score);
               const showGlow = st.tier !== "low";
@@ -225,17 +225,6 @@ export default function MapaClient({
                     fontWeight="700"
                   >
                     {score}
-                  </text>
-                  <text
-                    x={cx}
-                    y={cy + 48}
-                    textAnchor="middle"
-                    fill={st.color}
-                    fillOpacity={0.78}
-                    fontSize="9"
-                    fontWeight="500"
-                  >
-                    {bioma}
                   </text>
                 </g>
               );
