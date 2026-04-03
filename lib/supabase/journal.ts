@@ -1,5 +1,10 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import type { JournalEntry } from "@/types/modulo04";
+
+function journalClient(supabase?: SupabaseClient) {
+  return supabase ?? createClient();
+}
 
 function rowToEntry(row: Record<string, unknown>): JournalEntry {
   return {
@@ -18,9 +23,10 @@ function rowToEntry(row: Record<string, unknown>): JournalEntry {
 export async function getTodayJournalEntry(
   userId: string,
   date: string,
+  supabase?: SupabaseClient,
 ): Promise<JournalEntry | null> {
-  const supabase = createClient();
-  const { data, error } = await supabase
+  const client = journalClient(supabase);
+  const { data, error } = await client
     .from("eidos_journal_entries")
     .select("*")
     .eq("user_id", userId)
@@ -60,9 +66,10 @@ export async function saveJournalEntry(
 export async function getJournalArchive(
   userId: string,
   limitDays: number,
+  supabase?: SupabaseClient,
 ): Promise<JournalEntry[]> {
-  const supabase = createClient();
-  const { data, error } = await supabase
+  const client = journalClient(supabase);
+  const { data, error } = await client
     .from("eidos_journal_entries")
     .select("*")
     .eq("user_id", userId)
@@ -76,9 +83,10 @@ export async function getJournalArchive(
 export async function getWeeklyWordPattern(
   userId: string,
   weekStart: string,
+  supabase?: SupabaseClient,
 ): Promise<string | null> {
-  const supabase = createClient();
-  const { data, error } = await supabase
+  const client = journalClient(supabase);
+  const { data, error } = await client
     .from("eidos_journal_entries")
     .select("one_word")
     .eq("user_id", userId)
