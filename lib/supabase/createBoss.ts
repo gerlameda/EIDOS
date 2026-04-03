@@ -25,7 +25,11 @@ export async function createBossInDB(
     .select("*")
     .single();
 
-  if (error || !data) return null;
+  if (error || !data) {
+    // eslint-disable-next-line no-console
+    console.error("createBossInDB error:", error);
+    return null;
+  }
 
   const row = data as Record<string, unknown>;
   return {
