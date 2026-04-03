@@ -15,6 +15,43 @@ function isEmailOtpType(value: string): value is EmailOtpType {
   return (EMAIL_OTP_TYPES as readonly string[]).includes(value);
 }
 
+function capa1SavedHasData(saved: unknown): boolean {
+  if (!Array.isArray(saved)) return false;
+  return saved.some((x) => x != null);
+}
+
+function manifiestoHasContent(m: unknown): boolean {
+  if (m == null) return false;
+  if (typeof m === "string") return m.trim().length > 0;
+  if (typeof m === "object" && !Array.isArray(m)) {
+    const o = m as Record<string, unknown>;
+    const lines = o.lines;
+    if (Array.isArray(lines)) {
+      return lines.some(
+        (x) => x != null && String(x).trim().length > 0,
+      );
+    }
+    return Object.keys(o).length > 0;
+  }
+  return false;
+}
+
+function redirectPathFromProfile(profile: {
+  modulo03_completed: boolean | null;
+  manifiesto: unknown;
+  capa1_saved: unknown;
+  nombre: string | null;
+}): string {
+  if (profile.modulo03_completed === true) return "/modulo04";
+  if (manifiestoHasContent(profile.manifiesto)) return "/modulo03/cierre";
+  if (capa1SavedHasData(profile.capa1_saved)) return "/modulo02";
+  const nombre = profile.nombre;
+  if (typeof nombre === "string" && nombre.trim().length > 0) {
+    return "/onboarding/5";
+  }
+  return "/onboarding/1";
+}
+
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
@@ -23,22 +60,56 @@ export async function GET(request: Request) {
 
   const supabase = await createServerSupabaseClient();
 
+  let authed = false;
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
-      return NextResponse.redirect(`${origin}/modulo03/cierre`);
-    }
+    if (!error) authed = true;
   }
-
-  if (tokenHash && typeParam && isEmailOtpType(typeParam)) {
+  if (
+    !authed &&
+    tokenHash &&
+    typeParam &&
+    isEmailOtpType(typeParam)
+  ) {
     const { error } = await supabase.auth.verifyOtp({
       token_hash: tokenHash,
       type: typeParam,
     });
-    if (!error) {
-      return NextResponse.redirect(`${origin}/modulo03/cierre`);
-    }
+    if (!error) authed = true;
   }
 
-  return NextResponse.redirect(`${origin}/modulo03/cierre?auth_error=expired`);
+  if (!authed) {
+    return NextResponse.redirect(
+      `${origin}/onboarding/1?auth_error=expired`,
+    );
+  }
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+  if (userError || !user) {
+    return NextResponse.redirect(`${origin}/onboarding/1`);
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("eidos_profiles")
+    .select("modulo03_completed, manifiesto, capa1_saved, nombre")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileError || !profile) {
+    return NextResponse.redirect(`${origin}/onboarding/1`);
+  }
+
+  const path = redirectPathFromProfile(
+    profile as {
+      modulo03_completed: boolean | null;
+      manifiesto: unknown;
+      capa1_saved: unknown;
+      nombre: string | null;
+    },
+  );
+
+  return NextResponse.redirect(`${origin}${path}`);
 }
