@@ -1,5 +1,10 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import type { DailyCheckin, MissionKey } from "@/types/modulo04";
+
+function checkinClient(supabase?: SupabaseClient) {
+  return supabase ?? createClient();
+}
 
 function rowToCheckin(row: Record<string, unknown>): DailyCheckin {
   return {
@@ -19,9 +24,10 @@ function rowToCheckin(row: Record<string, unknown>): DailyCheckin {
 export async function getTodayCheckin(
   userId: string,
   date: string,
+  supabase?: SupabaseClient,
 ): Promise<DailyCheckin | null> {
-  const supabase = createClient();
-  const { data, error } = await supabase
+  const client = checkinClient(supabase);
+  const { data, error } = await client
     .from("eidos_daily_checkins")
     .select("*")
     .eq("user_id", userId)
