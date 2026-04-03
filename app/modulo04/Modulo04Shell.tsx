@@ -8,7 +8,7 @@ import { useBossStore } from "@/store/bossStore";
 interface Modulo04ShellProps {
   children: ReactNode;
   nombre: string;
-  nivel: number;
+  nivelLabel: string;
 }
 
 const NAV_ITEMS = [
@@ -22,21 +22,10 @@ const NAV_ITEMS = [
 export default function Modulo04Shell({
   children,
   nombre,
-  nivel,
+  nivelLabel,
 }: Modulo04ShellProps) {
   const pathname = usePathname();
   const streakDays = useBossStore((s) => s.streakDays);
-
-  const nivelLabel =
-    nivel <= 1
-      ? "Despertando"
-      : nivel <= 2
-        ? "Explorando"
-        : nivel <= 3
-          ? "Construyendo"
-          : nivel <= 4
-            ? "Dominando"
-            : "Maestro";
 
   return (
     <div className="flex min-h-screen flex-col bg-[#0D0D14]">
