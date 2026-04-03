@@ -90,6 +90,6 @@ export default async function Modulo04Page() {
     horizon,
   });
 
-  return <PrimerBoss userId={user.id} proposal={proposal} />;
+  return <PrimerBoss proposal={proposal} />;
 }
 

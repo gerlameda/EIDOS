@@ -2,16 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createBossInDB } from "@/lib/supabase/createBoss";
+import { createBossAction } from "./actions";
 import { useBossStore } from "@/store/bossStore";
 import type { Boss } from "@/types/boss";
 
 interface PrimerBossProps {
-  userId: string;
   proposal: Omit<Boss, "id" | "userId" | "createdAt" | "updatedAt">;
 }
 
-export default function PrimerBoss({ userId, proposal }: PrimerBossProps) {
+export default function PrimerBoss({ proposal }: PrimerBossProps) {
   const router = useRouter();
   const { setActiveBoss } = useBossStore();
   const [name, setName] = useState(proposal.name);
@@ -20,7 +19,7 @@ export default function PrimerBoss({ userId, proposal }: PrimerBossProps) {
   async function handleConfirm() {
     setConfirming(true);
     const finalProposal = { ...proposal, name };
-    const boss = await createBossInDB(userId, finalProposal);
+    const boss = await createBossAction(finalProposal);
     if (boss) {
       setActiveBoss(boss);
       router.push("/modulo04");
