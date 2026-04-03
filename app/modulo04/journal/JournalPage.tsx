@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { saveJournalAction } from "../actions";
 import { useBossStore } from "@/store/bossStore";
@@ -49,25 +48,11 @@ export default function JournalPage({
   }
 
   return (
-    <main className="min-h-screen bg-[#0D0D14] px-5 py-8 pb-16 text-[#F0EDE8]">
+    <div className="px-5 py-6 text-[#F0EDE8]">
       <div className="mx-auto w-full max-w-lg space-y-8">
-        {/* Header */}
-        <header className="flex items-center justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-widest text-[rgba(240,237,232,0.5)]">
-              {todayDate}
-            </p>
-            {streakDays > 0 && (
-              <p className="text-xs text-[#22D3EE]">Día {streakDays} de racha</p>
-            )}
-          </div>
-          <Link
-            href="/modulo04"
-            className="text-xs text-[rgba(240,237,232,0.5)]"
-          >
-            ← Campo base
-          </Link>
-        </header>
+        <p className="text-xs uppercase tracking-widest text-[rgba(240,237,232,0.5)]">
+          {todayDate}
+        </p>
 
         {/* Entrada del día */}
         <section className="space-y-4">
@@ -174,6 +159,6 @@ export default function JournalPage({
           </section>
         )}
       </div>
-    </main>
+    </div>
   );
 }

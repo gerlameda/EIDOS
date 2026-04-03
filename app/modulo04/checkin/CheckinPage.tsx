@@ -90,7 +90,7 @@ export default function CheckinPage({
 
   if (step === "summary" || checkinClosed) {
     return (
-      <main className="min-h-screen bg-[#0D0D14] px-5 py-8 text-[#F0EDE8]">
+      <div className="px-5 py-6 text-[#F0EDE8]">
         <div className="mx-auto w-full max-w-lg space-y-6">
           <h1 className="text-lg font-bold">Tu día</h1>
           <div className="space-y-3 rounded-xl border border-[#2A2A3A] bg-[#1A1A26] p-5">
@@ -128,12 +128,12 @@ export default function CheckinPage({
             ← Volver al campo base
           </Link>
         </div>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[#0D0D14] px-5 py-8 text-[#F0EDE8]">
+    <div className="px-5 py-6 text-[#F0EDE8]">
       <div className="mx-auto w-full max-w-lg space-y-6">
         {/* Progress */}
         <div className="flex items-center justify-between">
@@ -262,6 +262,6 @@ export default function CheckinPage({
           </section>
         )}
       </div>
-    </main>
+    </div>
   );
 }

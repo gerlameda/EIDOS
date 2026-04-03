@@ -14,7 +14,6 @@ interface CampoBaseProps {
   userId: string;
   boss: Boss | null;
   attacksToday: string[];
-  todayDate: string;
   rutinaBase: RutinaBase | null;
   sprintCommitments: SprintCommitment[];
 }
@@ -23,12 +22,10 @@ export default function CampoBase({
   userId,
   boss,
   attacksToday,
-  todayDate,
   rutinaBase,
   sprintCommitments,
 }: CampoBaseProps) {
   const { activeBoss, setActiveBoss, applyDamage } = useBossStore();
-  const streakDays = useBossStore((s) => s.streakDays);
   const { missions, setMissions, markMission, checkinClosed } = useDailyStore();
 
   // Inicializar boss y misiones
@@ -89,24 +86,8 @@ export default function CampoBase({
   }
 
   return (
-    <main className="min-h-screen bg-[#0D0D14] px-5 py-8 pb-24 text-[#F0EDE8]">
+    <div className="px-5 py-6 text-[#F0EDE8]">
       <div className="mx-auto w-full max-w-lg space-y-6">
-        {/* Header */}
-        <header className="flex items-center justify-between">
-          <div>
-            <p className="text-xs text-[rgba(240,237,232,0.5)] uppercase tracking-widest">
-              {todayDate}
-            </p>
-          </div>
-          {currentBoss && (
-            <div className="text-right">
-              <p className="text-xs text-[rgba(240,237,232,0.5)]">
-                🔥 {streakDays} días de racha
-              </p>
-            </div>
-          )}
-        </header>
-
         {/* Boss card */}
         {currentBoss ? (
           <section className="space-y-3 rounded-xl border border-[#2A2A3A] bg-[#1A1A26] p-5">
@@ -222,6 +203,6 @@ export default function CampoBase({
           </section>
         )}
       </div>
-    </main>
+    </div>
   );
 }

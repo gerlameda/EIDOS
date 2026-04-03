@@ -54,7 +54,6 @@ export default async function Modulo04Page() {
         userId={user.id}
         boss={boss}
         attacksToday={attacksToday}
-        todayDate={todayDate}
         rutinaBase={rutinaBase}
         sprintCommitments={sprintCommitments}
       />
