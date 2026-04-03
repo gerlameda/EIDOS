@@ -15,7 +15,7 @@ export function buildDailyMissions(
   attacksToday: MissionKey[],
 ): DailyMission[] {
   const missions: DailyMission[] = [];
-  const seen = new Set<MissionKey>();
+  const seen = new Set<string>();
 
   // Misiones de rutina base
   if (rutina) {
@@ -25,9 +25,10 @@ export function buildDailyMissions(
       ...rutina.noche.habits,
     ];
     for (const habit of allHabits) {
+      const normalized = habit.toLowerCase().trim();
+      if (seen.has(normalized)) continue;
+      seen.add(normalized);
       const key = buildMissionKey("rutina", habit);
-      if (seen.has(key)) continue;
-      seen.add(key);
       const isCore =
         habit.toLowerCase().trim() === coreAttack.toLowerCase().trim();
       missions.push({
@@ -44,15 +45,16 @@ export function buildDailyMissions(
 
   // Misiones de sprint
   for (const commitment of sprint) {
-    const key = buildMissionKey("sprint", commitment.commitment);
-    if (seen.has(key)) continue;
-    seen.add(key);
+    const normalized = commitment.habit.toLowerCase().trim();
+    if (seen.has(normalized)) continue;
+    seen.add(normalized);
+    const key = buildMissionKey("sprint", commitment.habit);
     const isCore =
-      commitment.commitment.toLowerCase().trim() ===
+      commitment.habit.toLowerCase().trim() ===
       coreAttack.toLowerCase().trim();
     missions.push({
       key,
-      habitText: commitment.commitment,
+      habitText: commitment.habit,
       area: "general",
       source: "sprint",
       damageAmount: isCore ? 20 : 5,
