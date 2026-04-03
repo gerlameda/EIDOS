@@ -1,3 +1,5 @@
-import LoginPage from "@/app/login/page";
+import { MagicLinkForm } from "@/components/auth/MagicLinkForm";
 
-export default LoginPage;
+export default function OnboardingAuthPage() {
+  return <MagicLinkForm variant="onboarding" />;
+}
