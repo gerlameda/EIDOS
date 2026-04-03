@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useOnboardingStore } from "@/store/onboardingStore";
@@ -7,9 +8,11 @@ import { useOnboardingStore } from "@/store/onboardingStore";
 export function SaveProfilePrompt({
   visible,
   onDismiss,
+  hasSession = false,
 }: {
   visible: boolean;
   onDismiss: () => void;
+  hasSession?: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [email, setEmail] = useState("");
@@ -68,6 +71,43 @@ export function SaveProfilePrompt({
   }
 
   if (!visible) return null;
+
+  if (hasSession) {
+    return (
+      <section
+        className="fixed inset-x-0 bottom-0 z-50 border-t border-[#2A2A3A] bg-[#0D0D14]/95 px-6 py-5 backdrop-blur"
+        aria-modal
+        role="dialog"
+      >
+        <div className="mx-auto w-full max-w-2xl">
+          <div className="space-y-4 rounded-xl border border-[#2A2A3A] bg-[#0D0D14]/40 p-5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-accent-cyan">
+              SIGUIENTE PASO
+            </p>
+            <h2 className="text-xl font-semibold text-text-primary">
+              Tu progreso ya está vinculado a tu cuenta.
+            </h2>
+            <p className="text-sm leading-relaxed text-[rgba(240,237,232,0.6)]">
+              Entra al juego diario: misiones, boss y check-in nocturno.
+            </p>
+            <Link
+              href="/modulo04"
+              className="block w-full rounded-lg bg-[#C9A84C] py-3.5 text-center font-bold text-[#0D0D14] transition-colors duration-200 hover:bg-[#C9A84C]/90"
+            >
+              Comenzar Módulo 04 →
+            </Link>
+            <button
+              type="button"
+              onClick={onDismiss}
+              className="block w-full text-center text-sm font-medium text-[rgba(240,237,232,0.6)] transition-colors hover:text-text-primary"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section

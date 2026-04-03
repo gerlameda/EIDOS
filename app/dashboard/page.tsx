@@ -180,6 +180,15 @@ export default function DashboardPage() {
             </Link>
           </div>
         </section>
+
+        <section className="mt-6">
+          <Link
+            href="/modulo04"
+            className="block w-full rounded-xl bg-[#22D3EE] py-4 text-center text-base font-bold tracking-wide text-[#0D0D14]"
+          >
+            ⚔️ Mi Juego →
+          </Link>
+        </section>
       </div>
     </main>
   );
