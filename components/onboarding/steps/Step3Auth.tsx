@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useOnboardingNavRegistration } from "@/components/onboarding/onboarding-nav-context";
@@ -45,6 +46,14 @@ export function Step3Auth() {
         >
           Continuar →
         </button>
+        <div className="mt-4 flex justify-center">
+          <Link
+            href="/onboarding/auth"
+            className="cursor-pointer text-sm text-[#22D3EE] no-underline"
+          >
+            Ya tengo cuenta →
+          </Link>
+        </div>
       </div>
     </div>
   );
