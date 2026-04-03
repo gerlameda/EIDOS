@@ -3,6 +3,7 @@ import { getUnifiedAreaScores } from "@/lib/modulo01/area-scores";
 import { generateBossProposal } from "@/lib/modulo04/bossGenerator";
 import { getAttacksToday, loadActiveBoss } from "@/lib/supabase/boss";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import type { RutinaBase, SprintCommitment } from "@/types/modulo03";
 import PrimerBoss from "./PrimerBoss";
 import CampoBase from "./CampoBase";
 
@@ -36,12 +37,26 @@ export default async function Modulo04Page() {
   ]);
 
   if (boss) {
+    const { data: profileData } = await supabase
+      .from("eidos_profiles")
+      .select("rutina_base, sprint_commitments")
+      .eq("id", user.id)
+      .single();
+
+    const rutinaBase =
+      (profileData?.rutina_base as RutinaBase | null) ?? null;
+    const sprintCommitments = Array.isArray(profileData?.sprint_commitments)
+      ? (profileData.sprint_commitments as SprintCommitment[])
+      : [];
+
     return (
       <CampoBase
         userId={user.id}
         boss={boss}
         attacksToday={attacksToday}
         todayDate={todayDate}
+        rutinaBase={rutinaBase}
+        sprintCommitments={sprintCommitments}
       />
     );
   }

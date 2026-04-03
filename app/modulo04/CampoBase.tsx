@@ -6,15 +6,17 @@ import { buildDailyMissions } from "@/lib/modulo04/missions";
 import { registerAttack, saveBossHp } from "@/lib/supabase/boss";
 import { useBossStore } from "@/store/bossStore";
 import { useDailyStore } from "@/store/dailyStore";
-import { useOnboardingStore } from "@/store/onboardingStore";
 import type { Boss } from "@/types/boss";
 import type { DailyMission } from "@/types/modulo04";
+import type { RutinaBase, SprintCommitment } from "@/types/modulo03";
 
 interface CampoBaseProps {
   userId: string;
   boss: Boss | null;
   attacksToday: string[];
   todayDate: string;
+  rutinaBase: RutinaBase | null;
+  sprintCommitments: SprintCommitment[];
 }
 
 export default function CampoBase({
@@ -22,11 +24,12 @@ export default function CampoBase({
   boss,
   attacksToday,
   todayDate,
+  rutinaBase,
+  sprintCommitments,
 }: CampoBaseProps) {
   const { activeBoss, setActiveBoss, applyDamage } = useBossStore();
   const streakDays = useBossStore((s) => s.streakDays);
   const { missions, setMissions, markMission, checkinClosed } = useDailyStore();
-  const { rutinaBase, sprintCommitments } = useOnboardingStore();
 
   // Inicializar boss y misiones
   useEffect(() => {
