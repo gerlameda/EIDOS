@@ -3,19 +3,17 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { selectReflectionQuestion } from "@/lib/modulo04/checkinContext";
-import { upsertCheckin } from "@/lib/supabase/checkin";
+import { upsertCheckinAction } from "../actions";
 import { useBossStore } from "@/store/bossStore";
 import { useDailyStore } from "@/store/dailyStore";
 import type { CheckinStep } from "@/types/modulo04";
 
 interface CheckinPageProps {
-  userId: string;
   todayDate: string;
   alreadyClosed: boolean;
 }
 
 export default function CheckinPage({
-  userId,
   todayDate,
   alreadyClosed,
 }: CheckinPageProps) {
@@ -73,7 +71,7 @@ export default function CheckinPage({
   async function handleFinish() {
     setSaving(true);
     try {
-      await upsertCheckin(userId, {
+      const ok = await upsertCheckinAction({
         date: todayDate,
         habitsCompleted: completedKeys,
         sleepOk,
@@ -81,6 +79,7 @@ export default function CheckinPage({
         reflectionQuestion,
         reflectionAnswer: reflectionAnswer || null,
       });
+      if (!ok) return;
       incrementStreak();
       setCheckinClosed(true);
       setStep("summary");

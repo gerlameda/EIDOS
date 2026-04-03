@@ -59,3 +59,38 @@ export async function createBossAction(
     updatedAt: row.updated_at as string,
   };
 }
+
+export async function upsertCheckinAction(payload: {
+  date: string;
+  habitsCompleted: string[];
+  sleepOk: boolean;
+  foodOk: boolean;
+  reflectionQuestion: string;
+  reflectionAnswer: string | null;
+}): Promise<boolean> {
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { error } = await supabase.from("eidos_daily_checkins").upsert(
+    {
+      user_id: user.id,
+      date: payload.date,
+      habits_completed: payload.habitsCompleted,
+      sleep_ok: payload.sleepOk,
+      food_ok: payload.foodOk,
+      reflection_question: payload.reflectionQuestion,
+      reflection_answer: payload.reflectionAnswer,
+    },
+    { onConflict: "user_id,date" },
+  );
+
+  if (error) {
+    // eslint-disable-next-line no-console
+    console.error("upsertCheckinAction error:", error);
+    return false;
+  }
+  return true;
+}

@@ -25,7 +25,6 @@ export default async function CheckinRoute() {
 
   return (
     <CheckinPage
-      userId={user.id}
       todayDate={todayDate}
       alreadyClosed={existing !== null}
     />
