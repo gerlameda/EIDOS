@@ -94,3 +94,38 @@ export async function upsertCheckinAction(payload: {
   }
   return true;
 }
+
+export async function saveJournalAction(payload: {
+  date: string;
+  content: string | null;
+  oneWord: string | null;
+  intentionTomorrow: string | null;
+  bossId: string | null;
+  streakDay: number;
+}): Promise<boolean> {
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { error } = await supabase.from("eidos_journal_entries").upsert(
+    {
+      user_id: user.id,
+      date: payload.date,
+      content: payload.content,
+      one_word: payload.oneWord,
+      intention_tomorrow: payload.intentionTomorrow,
+      boss_id: payload.bossId,
+      streak_day: payload.streakDay,
+    },
+    { onConflict: "user_id,date" },
+  );
+
+  if (error) {
+    // eslint-disable-next-line no-console
+    console.error("saveJournalAction error:", error);
+    return false;
+  }
+  return true;
+}

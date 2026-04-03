@@ -2,12 +2,11 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { saveJournalEntry } from "@/lib/supabase/journal";
+import { saveJournalAction } from "../actions";
 import { useBossStore } from "@/store/bossStore";
 import type { JournalEntry } from "@/types/modulo04";
 
 interface JournalPageProps {
-  userId: string;
   todayDate: string;
   todayEntry: JournalEntry | null;
   archive: JournalEntry[];
@@ -16,7 +15,6 @@ interface JournalPageProps {
 }
 
 export default function JournalPage({
-  userId,
   todayDate,
   todayEntry,
   archive,
@@ -36,7 +34,7 @@ export default function JournalPage({
   async function handleSave() {
     setSaving(true);
     try {
-      await saveJournalEntry(userId, {
+      const ok = await saveJournalAction({
         date: todayDate,
         content: content || null,
         oneWord: oneWord || null,
@@ -44,7 +42,7 @@ export default function JournalPage({
         bossId,
         streakDay: streakDays,
       });
-      setSaved(true);
+      if (ok) setSaved(true);
     } finally {
       setSaving(false);
     }

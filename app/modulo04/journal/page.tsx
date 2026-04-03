@@ -45,7 +45,6 @@ export default async function JournalRoute() {
 
   return (
     <JournalPage
-      userId={user.id}
       todayDate={todayDate}
       todayEntry={todayEntry}
       archive={archive}
