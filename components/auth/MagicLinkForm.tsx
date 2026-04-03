@@ -53,9 +53,9 @@ export function MagicLinkForm({ variant }: MagicLinkFormProps) {
     setError(null);
 
     if (variant === "onboarding") {
-      const syncClient = createClient();
-      const payload = profilePayloadFromStore();
       try {
+        const syncClient = createClient();
+        const payload = profilePayloadFromStore();
         const {
           data: { user },
         } = await syncClient.auth.getUser();
@@ -71,11 +71,7 @@ export function MagicLinkForm({ variant }: MagicLinkFormProps) {
           setPendingProfileCookie(payload);
         }
       } catch {
-        try {
-          setPendingProfileCookie(profilePayloadFromStore());
-        } catch {
-          /* cookie opcional; OTP sigue */
-        }
+        /* sync opcional — no bloquear el OTP */
       }
     }
 
