@@ -68,6 +68,11 @@ export function MagicLinkForm({ variant }: MagicLinkFormProps) {
     });
 
     if (signInError) {
+      console.error(
+        "[EIDOS] signInWithOtp error:",
+        signInError.message,
+        signInError.status,
+      );
       setError("Hubo un error. Intenta de nuevo.");
       setLoading(false);
       return;
