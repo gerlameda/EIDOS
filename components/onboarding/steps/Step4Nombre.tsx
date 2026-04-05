@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { syncProfileToSupabase } from "@/lib/onboarding/sync-profile";
 import {
   normalizeNombreUsuario,
   useOnboardingStore,
@@ -19,6 +20,7 @@ export function Step4Nombre() {
     const n = normalizeNombreUsuario(value);
     if (!n) return;
     setNombre(n);
+    void syncProfileToSupabase(useOnboardingStore.getState());
     router.push("/onboarding/5");
   }, [value, setNombre, router]);
 

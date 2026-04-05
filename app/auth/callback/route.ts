@@ -1,10 +1,5 @@
 import type { EmailOtpType } from "@supabase/supabase-js";
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import {
-  EIDOS_PENDING_PROFILE_COOKIE,
-  tryParsePendingProfileCookieValue,
-} from "@/lib/onboarding/profile-sync-payload";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const EMAIL_OTP_TYPES: readonly EmailOtpType[] = [
@@ -97,21 +92,6 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/onboarding/1`);
   }
 
-  const cookieStore = await cookies();
-  const pendingRaw = cookieStore.get(EIDOS_PENDING_PROFILE_COOKIE)?.value;
-  if (pendingRaw) {
-    const pending = tryParsePendingProfileCookieValue(pendingRaw);
-    if (pending) {
-      await supabase.from("eidos_profiles").upsert(
-        {
-          id: user.id,
-          ...pending,
-        },
-        { onConflict: "id" },
-      );
-    }
-  }
-
   const { data: profile, error: profileError } = await supabase
     .from("eidos_profiles")
     .select("modulo03_completed, manifiesto, capa1_saved, nombre")
@@ -131,12 +111,5 @@ export async function GET(request: Request) {
     },
   );
 
-  const res = NextResponse.redirect(`${origin}${path}`);
-  if (pendingRaw) {
-    res.cookies.set(EIDOS_PENDING_PROFILE_COOKIE, "", {
-      maxAge: 0,
-      path: "/",
-    });
-  }
-  return res;
+  return NextResponse.redirect(`${origin}${path}`);
 }

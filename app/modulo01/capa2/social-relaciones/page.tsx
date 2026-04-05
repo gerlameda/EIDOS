@@ -7,6 +7,7 @@ import { Scale1to5Question } from "@/components/modulo01/capa2/Scale1to5Question
 import { SliderQuestion } from "@/components/modulo01/capa2/SliderQuestion";
 import { capa1RangoFromScore } from "@/lib/modulo01/capa1-flow-data";
 import type { Capa2AreaStatus } from "@/lib/modulo01/capa2-types";
+import { syncProfileToSupabase } from "@/lib/onboarding/sync-profile";
 import { useOnboardingStore } from "@/store/onboardingStore";
 
 type Paso = 0 | 1 | 2 | 3 | 4 | 5;
@@ -169,6 +170,7 @@ export default function Capa2SocialRelacionesPage() {
         completedAt: now,
       };
       updateCapa2Area(areaStatus);
+      void syncProfileToSupabase(useOnboardingStore.getState());
       setPaso(5);
       return;
     }

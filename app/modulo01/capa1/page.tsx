@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { EidosAvatar } from "@/components/avatar/EidosAvatar";
+import { syncProfileToSupabase } from "@/lib/onboarding/sync-profile";
 import {
   normalizeNombreUsuario,
   useOnboardingStore,
@@ -206,6 +207,7 @@ export default function Modulo01Capa1Page() {
         j === areaIndex ? ans : x,
       ),
     );
+    void syncProfileToSupabase(useOnboardingStore.getState());
     if (areaIndex < CAPA1_AREAS.length - 1) {
       goToArea(areaIndex + 1);
     } else {
@@ -219,6 +221,7 @@ export default function Modulo01Capa1Page() {
         j === areaIndex ? null : x,
       ),
     );
+    void syncProfileToSupabase(useOnboardingStore.getState());
     if (areaIndex < CAPA1_AREAS.length - 1) {
       goToArea(areaIndex + 1);
     } else {

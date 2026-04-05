@@ -6,6 +6,7 @@ import { ManifiestoEditor } from "@/components/modulo03/ManifiestoEditor";
 import { ModuleProgress } from "@/components/modulo03/ModuleProgress";
 import { calculateCriticalHabits } from "@/lib/modulo02/critical-habits";
 import { generateManifiestoProposal } from "@/lib/modulo03/manifiesto";
+import { syncProfileToSupabase } from "@/lib/onboarding/sync-profile";
 import { useOnboardingStore } from "@/store/onboardingStore";
 import type { Manifiesto } from "@/types/modulo03";
 
@@ -60,6 +61,7 @@ export default function Modulo03PorquePage() {
       createdAt: new Date().toISOString(),
     };
     saveManifiesto(payload);
+    void syncProfileToSupabase(useOnboardingStore.getState());
     router.push("/modulo03/sistema");
   };
 

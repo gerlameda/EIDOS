@@ -2,40 +2,10 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import {
-  EIDOS_PENDING_PROFILE_COOKIE,
-  EIDOS_PENDING_PROFILE_MAX_AGE_SEC,
-  type EidosProfileSyncPayload,
-} from "@/lib/onboarding/profile-sync-payload";
+import { syncProfileToSupabase } from "@/lib/onboarding/sync-profile";
 import { useOnboardingStore } from "@/store/onboardingStore";
 
 export type MagicLinkFormVariant = "login" | "onboarding";
-
-function profilePayloadFromStore(): EidosProfileSyncPayload {
-  const s = useOnboardingStore.getState();
-  return {
-    nombre: s.nombre,
-    nivel: s.nivel,
-    area_prioritaria: s.areaPrioritaria,
-    capa1_saved: s.capa1Saved,
-    capa2_areas: s.capa2Areas,
-    vision_areas: s.visionAreas,
-    critical_habits: s.criticalHabits,
-    manifiesto: s.manifiesto,
-    rutina_base: s.rutinaBase,
-    sprint_commitments: s.sprintCommitments,
-    modulo03_completed: s.modulo03Completed,
-  };
-}
-
-function setPendingProfileCookie(payload: EidosProfileSyncPayload): void {
-  const value = encodeURIComponent(JSON.stringify(payload));
-  const secure =
-    typeof window !== "undefined" && window.location.protocol === "https:"
-      ? "; Secure"
-      : "";
-  document.cookie = `${EIDOS_PENDING_PROFILE_COOKIE}=${value}; Path=/; Max-Age=${EIDOS_PENDING_PROFILE_MAX_AGE_SEC}; SameSite=Lax${secure}`;
-}
 
 interface MagicLinkFormProps {
   variant: MagicLinkFormVariant;
@@ -52,30 +22,37 @@ export function MagicLinkForm({ variant }: MagicLinkFormProps) {
     setLoading(true);
     setError(null);
 
+    const supabase = createClient();
+    let linkedAnonymousWithEmail = false;
+
     if (variant === "onboarding") {
       try {
-        const syncClient = createClient();
-        const payload = profilePayloadFromStore();
         const {
           data: { user },
-        } = await syncClient.auth.getUser();
-        if (user) {
-          await syncClient.from("eidos_profiles").upsert(
+        } = await supabase.auth.getUser();
+        if (user?.is_anonymous) {
+          await syncProfileToSupabase(useOnboardingStore.getState());
+          const { error: updateErr } = await supabase.auth.updateUser(
+            { email },
             {
-              id: user.id,
-              ...payload,
+              emailRedirectTo: `${window.location.origin}/auth/callback`,
             },
-            { onConflict: "id" },
           );
-        } else {
-          setPendingProfileCookie(payload);
+          if (!updateErr) {
+            linkedAnonymousWithEmail = true;
+          }
         }
       } catch {
-        /* sync opcional — no bloquear el OTP */
+        /* silencioso */
       }
     }
 
-    const supabase = createClient();
+    if (linkedAnonymousWithEmail) {
+      setSent(true);
+      setLoading(false);
+      return;
+    }
+
     const { error: signInError } = await supabase.auth.signInWithOtp({
       email,
       options: {

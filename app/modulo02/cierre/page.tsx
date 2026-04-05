@@ -11,6 +11,7 @@ import {
   MODULO01_AREA_ID_BY_MODULO02,
 } from "@/lib/modulo02/areas";
 import { calculateCriticalHabits } from "@/lib/modulo02/critical-habits";
+import { syncProfileToSupabase } from "@/lib/onboarding/sync-profile";
 import { useOnboardingStore } from "@/store/onboardingStore";
 
 export default function Modulo02CierrePage() {
@@ -41,6 +42,7 @@ export default function Modulo02CierrePage() {
     if (visionAreas.length < 5) return;
     const habits = calculateCriticalHabits(visionAreas);
     setCriticalHabits(habits);
+    void syncProfileToSupabase(useOnboardingStore.getState());
   }, [setCriticalHabits, visionAreas]);
 
   const scores = useMemo(

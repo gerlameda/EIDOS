@@ -6,6 +6,7 @@ import { ModuleProgress } from "@/components/modulo03/ModuleProgress";
 import { SprintEditor } from "@/components/modulo03/SprintEditor";
 import { calculateCriticalHabits } from "@/lib/modulo02/critical-habits";
 import { generateSprintProposals } from "@/lib/modulo03/sprint";
+import { syncProfileToSupabase } from "@/lib/onboarding/sync-profile";
 import { useOnboardingStore } from "@/store/onboardingStore";
 import type { SprintCommitment } from "@/types/modulo03";
 
@@ -58,6 +59,7 @@ export default function Modulo03SprintPage() {
       saveSprintCommitment(c);
     }
     completeModulo03();
+    void syncProfileToSupabase(useOnboardingStore.getState());
     router.push("/modulo03/cierre");
   };
 

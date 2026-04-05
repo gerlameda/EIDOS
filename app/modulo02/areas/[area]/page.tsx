@@ -17,6 +17,7 @@ import {
 } from "@/lib/modulo02/areas";
 import { getHorizonOptions } from "@/lib/modulo02/horizon-options";
 import { getVisionOptions } from "@/lib/modulo02/vision-options";
+import { syncProfileToSupabase } from "@/lib/onboarding/sync-profile";
 import { useOnboardingStore } from "@/store/onboardingStore";
 import type { VisionHorizon } from "@/types/modulo02";
 
@@ -109,6 +110,7 @@ export default function Modulo02AreaPage() {
       horizon,
       sourceScore,
     });
+    void syncProfileToSupabase(useOnboardingStore.getState());
     const idx = AREA_ORDER.indexOf(validArea);
     const nextArea = AREA_ORDER[idx + 1];
     router.push(nextArea ? `/modulo02/areas/${nextArea}` : "/modulo02/cierre");
