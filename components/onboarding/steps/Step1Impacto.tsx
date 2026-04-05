@@ -16,7 +16,12 @@ export function Step1Impacto() {
         "is_anonymous:",
         session?.user?.is_anonymous,
       );
-      if (!session) {
+
+      if (session && !session.user.is_anonymous) {
+        await supabase.auth.signOut();
+      }
+
+      if (!session || !session.user.is_anonymous) {
         const { data, error } = await supabase.auth.signInAnonymously();
         console.log(
           "[EIDOS] signInAnonymously result:",
