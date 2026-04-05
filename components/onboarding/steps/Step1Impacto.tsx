@@ -10,8 +10,20 @@ export function Step1Impacto() {
       const {
         data: { session },
       } = await supabase.auth.getSession();
+      console.log(
+        "[EIDOS] session al inicio:",
+        session?.user?.id,
+        "is_anonymous:",
+        session?.user?.is_anonymous,
+      );
       if (!session) {
-        await supabase.auth.signInAnonymously();
+        const { data, error } = await supabase.auth.signInAnonymously();
+        console.log(
+          "[EIDOS] signInAnonymously result:",
+          data?.user?.id,
+          "error:",
+          error?.message,
+        );
       }
     };
     void initAnonSession();

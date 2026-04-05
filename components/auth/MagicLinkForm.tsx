@@ -30,6 +30,12 @@ export function MagicLinkForm({ variant }: MagicLinkFormProps) {
         const {
           data: { user },
         } = await supabase.auth.getUser();
+        console.log(
+          "[EIDOS] MagicLinkForm user:",
+          user?.id,
+          "is_anonymous:",
+          user?.is_anonymous,
+        );
         if (user?.is_anonymous) {
           await syncProfileToSupabase(useOnboardingStore.getState());
           const { error: updateErr } = await supabase.auth.updateUser(
