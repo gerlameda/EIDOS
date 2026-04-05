@@ -38,13 +38,14 @@ export function MagicLinkForm({ variant }: MagicLinkFormProps) {
         );
         if (user?.is_anonymous) {
           await syncProfileToSupabase(useOnboardingStore.getState());
-          const { error: updateErr } = await supabase.auth.updateUser(
-            { email },
-            {
-              emailRedirectTo: `${window.location.origin}/auth/callback`,
+          const { error: otpErr } = await supabase.auth.signInWithOtp({
+            email,
+            options: {
+              emailRedirectTo: `${window.location.origin}/auth/confirm`,
+              shouldCreateUser: true,
             },
-          );
-          if (!updateErr) {
+          });
+          if (!otpErr) {
             linkedAnonymousWithEmail = true;
           }
         }
