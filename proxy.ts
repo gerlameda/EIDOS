@@ -1,7 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PROTECTED_PREFIXES: string[] = [];
+const PROTECTED_PREFIXES = [
+  "/dashboard",
+  "/modulo01",
+  "/modulo02",
+  "/modulo03",
+  "/modulo04",
+];
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -34,9 +40,11 @@ export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isProtected = PROTECTED_PREFIXES.some((p) => pathname.startsWith(p));
 
-  if (isProtected && !user) {
+  const isAuthenticated = user !== null && user.is_anonymous !== true;
+
+  if (isProtected && !isAuthenticated) {
     const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("next", pathname);
+    loginUrl.searchParams.set("redirectTo", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
