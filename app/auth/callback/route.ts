@@ -51,7 +51,10 @@ function redirectPathFromProfile(profile: {
   if (typeof nombre === "string" && nombre.trim().length > 0) {
     return "/onboarding/5";
   }
-  return "/onboarding/1";
+  // Redirigir a step 4 (nombre) en vez de step 1 para evitar que
+  // Step1Impacto destruya la sesión recién confirmada via magic link.
+  // Steps 1-3 son el gancho pre-auth; el usuario ya los vio.
+  return "/onboarding/4";
 }
 
 export async function GET(request: Request) {
