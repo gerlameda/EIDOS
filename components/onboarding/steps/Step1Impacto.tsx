@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useOnboardingStore } from "@/store/onboardingStore";
 
 export function Step1Impacto() {
   useEffect(() => {
@@ -18,6 +19,10 @@ export function Step1Impacto() {
       );
 
       if (session && !session.user.is_anonymous) {
+        // Limpiar datos obsoletos del store antes de iniciar un nuevo flujo
+        // para evitar que datos de sesiones anteriores (ej. modulo03Completed: true)
+        // se sincronicen al perfil anónimo nuevo y corrompan la redirección.
+        useOnboardingStore.getState().resetStore();
         await supabase.auth.signOut();
       }
 

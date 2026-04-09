@@ -93,6 +93,8 @@ export interface OnboardingStore {
   saveRutinaBase: (rutina: RutinaBase) => void;
   saveSprintCommitment: (commitment: SprintCommitment) => void;
   completeModulo03: () => void;
+  /** Reinicia el store a sus valores por defecto y limpia sessionStorage. */
+  resetStore: () => void;
 }
 
 const clampNivel = (n: number): OnboardingNivel => {
@@ -169,6 +171,21 @@ export const useOnboardingStore = create<OnboardingStore>()(
           return { sprintCommitments };
         }),
       completeModulo03: () => set({ modulo03Completed: true }),
+      resetStore: () =>
+        set({
+          step: 1,
+          nombre: "",
+          nivel: 1,
+          areaPrioritaria: "",
+          capa1Saved: emptyCapa1Saved(),
+          capa2Areas: [],
+          visionAreas: [],
+          criticalHabits: [],
+          manifiesto: null,
+          rutinaBase: null,
+          sprintCommitments: [],
+          modulo03Completed: false,
+        }),
     }),
     {
       name: "eidos-onboarding",

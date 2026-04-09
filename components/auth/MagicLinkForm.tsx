@@ -37,7 +37,14 @@ export function MagicLinkForm({ variant }: MagicLinkFormProps) {
           user?.is_anonymous,
         );
         if (user?.is_anonymous) {
-          await syncProfileToSupabase(useOnboardingStore.getState());
+          // Forzamos modulo03Completed: false al sincronizar en este punto del
+          // onboarding. El usuario aún no ha completado nada — esto previene que
+          // datos obsoletos del sessionStorage (de sesiones anteriores) corrompan
+          // la redirección post-magic-link hacia el juego.
+          await syncProfileToSupabase({
+            ...useOnboardingStore.getState(),
+            modulo03Completed: false,
+          });
           const { error: otpErr } = await supabase.auth.signInWithOtp({
             email,
             options: {
