@@ -7,7 +7,34 @@ import {
   loadProfileFromSupabase,
   saveProfileToSupabase,
 } from "@/lib/supabase/profile";
-import { useOnboardingStore } from "@/store/onboardingStore";
+import { useOnboardingStore, type OnboardingStore } from "@/store/onboardingStore";
+
+/**
+ * Heurística: cuánto "peso" tienen los datos de onboarding.
+ * Se usa para decidir quién gana cuando local y remoto difieren.
+ * Contamos respuestas de capa1 no-null, áreas de capa2, visiones, hábitos,
+ * flags de módulos. Más datos → más peso.
+ */
+function profileWeight(
+  state: Partial<OnboardingStore> | null | undefined,
+): number {
+  if (!state) return 0;
+  let w = 0;
+  if (Array.isArray(state.capa1Saved)) {
+    w += state.capa1Saved.filter((x) => x != null).length * 3;
+  }
+  if (Array.isArray(state.capa2Areas)) w += state.capa2Areas.length * 5;
+  if (Array.isArray(state.visionAreas)) w += state.visionAreas.length * 2;
+  if (Array.isArray(state.criticalHabits)) w += state.criticalHabits.length;
+  if (Array.isArray(state.sprintCommitments)) {
+    w += state.sprintCommitments.length * 2;
+  }
+  if (state.manifiesto) w += 3;
+  if (state.rutinaBase) w += 3;
+  if (state.modulo03Completed) w += 10;
+  if (typeof state.nombre === "string" && state.nombre.length > 0) w += 1;
+  return w;
+}
 
 /**
  * Sincroniza el store de onboarding con Supabase cuando hay sesión activa.
@@ -76,18 +103,43 @@ export function useSupabaseSync() {
           setTimeout(() => {
             if (cancelled) return;
 
-            // 1) Guarda inmediatamente el estado actual del onboarding.
-            saveProfileToSupabase(uid, useOnboardingStore.getState())
-              .catch((e) =>
-                console.error("[EIDOS] save onSignIn error:", e),
-              );
-
-            // 2) Si había datos previos completados, los traemos.
+            // Política "load-first, save-only-if-local-wins":
+            // 1) LEE primero lo remoto.
+            // 2) Comparamos peso (nº de respuestas significativas).
+            // 3) Si remoto > local, hidratamos local con remoto (confiamos en lo
+            //    guardado).
+            // 4) Si local > remoto, subimos local (el usuario tiene cambios
+            //    nuevos).
+            // 5) Si empatan, no tocamos nada.
+            // Esto previene el bug donde una pestaña nueva (sessionStorage
+            // vacío) pisaba los datos buenos del usuario con defaults.
             loadProfileFromSupabase(uid)
-              .then((profile) => {
+              .then((remote) => {
                 if (cancelled) return;
-                if (profile && profile.modulo03Completed) {
-                  useOnboardingStore.setState(profile);
+                const local = useOnboardingStore.getState();
+                const remoteW = profileWeight(remote);
+                const localW = profileWeight(local);
+
+                if (remoteW > localW && remote) {
+                  console.log(
+                    "[EIDOS] hydrating local from remote (remote=%d, local=%d)",
+                    remoteW,
+                    localW,
+                  );
+                  useOnboardingStore.setState(remote);
+                  return;
+                }
+
+                if (localW > remoteW) {
+                  console.log(
+                    "[EIDOS] saving local to remote (local=%d, remote=%d)",
+                    localW,
+                    remoteW,
+                  );
+                  saveProfileToSupabase(uid, useOnboardingStore.getState())
+                    .catch((e) =>
+                      console.error("[EIDOS] save onSignIn error:", e),
+                    );
                 }
               })
               .catch((e) =>

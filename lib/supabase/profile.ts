@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { EidosProfileRow } from "@/lib/supabase/types";
 import type { OnboardingStore } from "@/store/onboardingStore";
 import { useOnboardingStore } from "@/store/onboardingStore";
+import { useSyncStatusStore } from "@/store/syncStatusStore";
 
 function fallbackCapa1Saved(state: OnboardingStore): OnboardingStore["capa1Saved"] {
   return state.capa1Saved;
@@ -53,24 +54,50 @@ export async function saveProfileToSupabase(
   state: OnboardingStore,
 ): Promise<void> {
   const supabase = createClient();
+  const statusStore = useSyncStatusStore.getState();
+  statusStore.setSyncing(true);
 
-  const { error } = await supabase.from("eidos_profiles").upsert(
-    {
-      id: userId,
-      nombre: state.nombre,
-      nivel: state.nivel,
-      area_prioritaria: state.areaPrioritaria,
-      capa1_saved: state.capa1Saved,
-      capa2_areas: state.capa2Areas,
-      vision_areas: state.visionAreas,
-      critical_habits: state.criticalHabits,
-      manifiesto: state.manifiesto,
-      rutina_base: state.rutinaBase,
-      sprint_commitments: state.sprintCommitments,
-      modulo03_completed: state.modulo03Completed,
-    },
-    {
-      onConflict: "id",
-    },
-  );
+  try {
+    const { error } = await supabase.from("eidos_profiles").upsert(
+      {
+        id: userId,
+        nombre: state.nombre,
+        nivel: state.nivel,
+        area_prioritaria: state.areaPrioritaria,
+        capa1_saved: state.capa1Saved,
+        capa2_areas: state.capa2Areas,
+        vision_areas: state.visionAreas,
+        critical_habits: state.criticalHabits,
+        manifiesto: state.manifiesto,
+        rutina_base: state.rutinaBase,
+        sprint_commitments: state.sprintCommitments,
+        modulo03_completed: state.modulo03Completed,
+      },
+      {
+        onConflict: "id",
+      },
+    );
+
+    if (error) {
+      const msg = `Supabase upsert: ${error.message}${
+        error.code ? ` (${error.code})` : ""
+      }`;
+      console.error("saveProfileToSupabase upsert failed", {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+      });
+      statusStore.setError(msg, state);
+      return;
+    }
+
+    statusStore.clearError();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    console.error("saveProfileToSupabase threw", err);
+    statusStore.setError(msg, state);
+  } finally {
+    statusStore.setSyncing(false);
+  }
 }

@@ -11,6 +11,7 @@ import { useEffectsStore } from "@/store/effectsStore";
 import type { Boss } from "@/types/boss";
 import type { DailyMission } from "@/types/modulo04";
 import type { RutinaBase, SprintCommitment } from "@/types/modulo03";
+import type { Capa2AreaStatus } from "@/lib/modulo01/capa2-types";
 
 interface CampoBaseProps {
   userId: string;
@@ -18,6 +19,7 @@ interface CampoBaseProps {
   attacksToday: string[];
   rutinaBase: RutinaBase | null;
   sprintCommitments: SprintCommitment[];
+  capa2Areas?: Capa2AreaStatus[];
 }
 
 export default function CampoBase({
@@ -26,6 +28,7 @@ export default function CampoBase({
   attacksToday,
   rutinaBase,
   sprintCommitments,
+  capa2Areas = [],
 }: CampoBaseProps) {
   const { activeBoss, setActiveBoss, applyDamage } = useBossStore();
   const { missions, setMissions, markMission, checkinClosed } = useDailyStore();
@@ -70,6 +73,10 @@ export default function CampoBase({
   const taunt = currentBoss
     ? currentBoss.tauntPhrases[currentBoss.phase]
     : null;
+
+  // Capa 2 completa = 5 áreas con completedAt. Si no, mostramos CTA.
+  const capa2Completas = capa2Areas.filter((a) => a.completedAt != null).length;
+  const capa2Pendiente = capa2Completas < 5;
 
   async function handleAttack(mission: DailyMission) {
     if (mission.markedAt) return;
@@ -166,6 +173,31 @@ export default function CampoBase({
             <p className="text-sm text-[rgba(240,237,232,0.5)]">
               No tienes un boss activo. Pronto podrás crear uno.
             </p>
+          </section>
+        )}
+
+        {/* CTA Capa 2 — si le falta completar el diagnóstico profundo */}
+        {capa2Pendiente && (
+          <section className="space-y-2 rounded-xl border border-[#22D3EE]/60 bg-gradient-to-br from-[#14141C] to-[#1A1A26] p-5">
+            <p className="text-xs font-bold uppercase tracking-widest text-[#22D3EE]">
+              Diagnóstico profundo · {capa2Completas}/5
+            </p>
+            <h3 className="text-base font-semibold text-[#F0EDE8]">
+              Desbloquea el mapa real de tus áreas
+            </h3>
+            <p className="text-xs text-[rgba(240,237,232,0.6)]">
+              Tus calificaciones iniciales son una intuición. Capa 2 te hace
+              preguntas específicas por área y reemplaza esos scores con datos
+              reales. Cada área toma ~3 min.
+            </p>
+            <Link
+              href="/modulo01/capa2"
+              className="mt-1 block w-full rounded-xl bg-[#22D3EE] py-2.5 text-center text-sm font-bold text-[#0D0D14] transition hover:brightness-110"
+            >
+              {capa2Completas === 0
+                ? "Comenzar diagnóstico →"
+                : "Continuar diagnóstico →"}
+            </Link>
           </section>
         )}
 

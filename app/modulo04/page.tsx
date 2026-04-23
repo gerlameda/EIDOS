@@ -4,6 +4,8 @@ import { generateBossProposal } from "@/lib/modulo04/bossGenerator";
 import { getAttacksToday, loadActiveBoss } from "@/lib/supabase/boss";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { RutinaBase, SprintCommitment } from "@/types/modulo03";
+import type { Capa2AreaStatus } from "@/lib/modulo01/capa2-types";
+import type { Capa1AreaAnswer } from "@/lib/modulo01/capa1-flow-data";
 import PrimerBoss from "./PrimerBoss";
 import CampoBase from "./CampoBase";
 
@@ -39,7 +41,7 @@ export default async function Modulo04Page() {
   if (boss) {
     const { data: profileData } = await supabase
       .from("eidos_profiles")
-      .select("rutina_base, sprint_commitments")
+      .select("rutina_base, sprint_commitments, capa2_areas")
       .eq("id", user.id)
       .single();
 
@@ -47,6 +49,9 @@ export default async function Modulo04Page() {
       (profileData?.rutina_base as RutinaBase | null) ?? null;
     const sprintCommitments = Array.isArray(profileData?.sprint_commitments)
       ? (profileData.sprint_commitments as SprintCommitment[])
+      : [];
+    const capa2Areas = Array.isArray(profileData?.capa2_areas)
+      ? (profileData.capa2_areas as Capa2AreaStatus[])
       : [];
 
     return (
@@ -56,6 +61,7 @@ export default async function Modulo04Page() {
         attacksToday={attacksToday}
         rutinaBase={rutinaBase}
         sprintCommitments={sprintCommitments}
+        capa2Areas={capa2Areas}
       />
     );
   }
@@ -79,8 +85,8 @@ export default async function Modulo04Page() {
   const areaNormalizada = normalizeAreaKey(areaPrioritariaRaw);
 
   const scores = getUnifiedAreaScores(
-    capa1Saved as any[],
-    capa2Areas as any[],
+    capa1Saved as (Capa1AreaAnswer | null)[],
+    capa2Areas as Capa2AreaStatus[],
   );
   const areaScore =
     scores.find((s) => s.areaId.toLowerCase() === areaNormalizada)?.score ??

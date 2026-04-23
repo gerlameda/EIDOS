@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import type { AreaScore } from "@/lib/modulo01/area-scores";
 import {
   AREA_LABELS,
@@ -9,6 +9,12 @@ import {
   MODULO01_AREA_ID_BY_MODULO02,
   type Modulo02Area,
 } from "@/lib/modulo02/areas";
+import {
+  getMissionsForArea,
+  tierFromScore,
+  type AreaMission,
+} from "@/lib/modulo04/areaMissions";
+import { addUserHabitAction } from "@/app/modulo04/actions";
 
 const AREA_CONFIG: Record<
   Modulo02Area,
@@ -70,18 +76,43 @@ export default function MapaClient({
 }: MapaClientProps) {
   const [sheetArea, setSheetArea] = useState<Modulo02Area | null>(null);
   const [sheetEnter, setSheetEnter] = useState(false);
+  const [adoptedIds, setAdoptedIds] = useState<Set<string>>(new Set());
+  const [adoptErrors, setAdoptErrors] = useState<Record<string, string>>({});
+  const [isAdopting, startAdopt] = useTransition();
 
   useEffect(() => {
     if (sheetArea) {
       const id = requestAnimationFrame(() => setSheetEnter(true));
       return () => cancelAnimationFrame(id);
     }
-    setSheetEnter(false);
+    // Cuando sheetArea pasa a null, closeSheet() ya bajó setSheetEnter(false)
+    // antes de despachar el timeout — no hace falta tocarlo aquí y así
+    // evitamos setState síncrono en efecto (React 19).
   }, [sheetArea]);
 
   const closeSheet = useCallback(() => {
     setSheetEnter(false);
     window.setTimeout(() => setSheetArea(null), 300);
+  }, []);
+
+  const adoptMission = useCallback((mission: AreaMission) => {
+    if (!mission.habitGroup) return; // one-shots no se adoptan como hábito
+    setAdoptErrors((prev) => {
+      const next = { ...prev };
+      delete next[mission.id];
+      return next;
+    });
+    startAdopt(async () => {
+      const res = await addUserHabitAction({
+        groupKey: mission.habitGroup!,
+        label: mission.title,
+      });
+      if (res.habit) {
+        setAdoptedIds((prev) => new Set(prev).add(mission.id));
+      } else if (res.error) {
+        setAdoptErrors((prev) => ({ ...prev, [mission.id]: res.error! }));
+      }
+    });
   }, []);
 
   const areaRows = useMemo(
@@ -103,6 +134,13 @@ export default function MapaClient({
   const sheetRow = sheetArea
     ? areaRows.find((r) => r.key === sheetArea)
     : null;
+
+  // Misiones para el área abierta, filtradas por su tier actual.
+  const sheetMissions = useMemo<AreaMission[]>(() => {
+    if (!sheetRow) return [];
+    const tier = tierFromScore(sheetRow.score);
+    return getMissionsForArea(sheetRow.key, tier);
+  }, [sheetRow]);
 
   return (
     <div className="px-5 py-6 text-[#F0EDE8]">
@@ -191,6 +229,56 @@ export default function MapaClient({
                       }
                     />
                   )}
+                  {/* Pulso rojo en áreas en ruinas — pide atención */}
+                  {st.tier === "low" && (
+                    <>
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={8}
+                        fill="none"
+                        stroke="#EF4444"
+                        strokeWidth="1.5"
+                      >
+                        <animate
+                          attributeName="r"
+                          values="8;22;8"
+                          dur="2.4s"
+                          repeatCount="indefinite"
+                        />
+                        <animate
+                          attributeName="opacity"
+                          values="0.65;0;0.65"
+                          dur="2.4s"
+                          repeatCount="indefinite"
+                        />
+                      </circle>
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={8}
+                        fill="none"
+                        stroke="#EF4444"
+                        strokeWidth="1"
+                        opacity="0.5"
+                      >
+                        <animate
+                          attributeName="r"
+                          values="8;26;8"
+                          dur="2.4s"
+                          begin="1.2s"
+                          repeatCount="indefinite"
+                        />
+                        <animate
+                          attributeName="opacity"
+                          values="0.5;0;0.5"
+                          dur="2.4s"
+                          begin="1.2s"
+                          repeatCount="indefinite"
+                        />
+                      </circle>
+                    </>
+                  )}
                   <ellipse
                     cx={cx}
                     cy={cy}
@@ -250,10 +338,10 @@ export default function MapaClient({
             </span>
             <span className="inline-flex items-center gap-1.5">
               <span
-                className="inline-block h-2 w-2 rounded-full bg-[#374151]"
+                className="inline-block h-2 w-2 rounded-full bg-[#EF4444]"
                 aria-hidden
               />
-              En ruinas (&lt;35)
+              En ruinas (&lt;35) — pide atención
             </span>
           </div>
         </section>
@@ -425,25 +513,87 @@ export default function MapaClient({
                 {sheetRow.state.label}
               </p>
             </div>
-            <div className="mt-6 flex flex-col gap-3">
-              <Link
-                href={`/modulo04?area=${sheetRow.key}`}
-                onClick={closeSheet}
-                className="text-sm font-medium text-[#22D3EE]"
-              >
-                Ver misiones del área →
-              </Link>
+            {/* Misiones sugeridas por tier actual */}
+            <div className="mt-6">
+              <div className="flex items-baseline justify-between">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-[#22D3EE]">
+                  Misiones sugeridas
+                </h3>
+                <span className="text-[10px] uppercase tracking-wider text-[rgba(240,237,232,0.45)]">
+                  {tierFromScore(sheetRow.score) === "ruinas"
+                    ? "Empieza aquí"
+                    : tierFromScore(sheetRow.score) === "desarrollo"
+                      ? "Siguiente capa"
+                      : "Mantén el vuelo"}
+                </span>
+              </div>
+
+              <ul className="mt-3 max-h-[42vh] space-y-2 overflow-y-auto pr-1">
+                {sheetMissions.map((m) => {
+                  const adopted = adoptedIds.has(m.id);
+                  const error = adoptErrors[m.id];
+                  return (
+                    <li
+                      key={m.id}
+                      className="rounded-lg border border-[rgba(240,237,232,0.08)] bg-[#14141C] p-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-[#F0EDE8]">
+                            {m.title}
+                          </p>
+                          <p className="mt-1 text-xs leading-relaxed text-[rgba(240,237,232,0.55)]">
+                            {m.description}
+                          </p>
+                          <p className="mt-2 text-[10px] uppercase tracking-wider text-[#C9A84C]">
+                            +{m.xp} XP
+                            {m.habitGroup && " · hábito diario"}
+                          </p>
+                          {error && (
+                            <p className="mt-1 text-[11px] text-red-300">
+                              {error}
+                            </p>
+                          )}
+                        </div>
+                        {m.habitGroup ? (
+                          adopted ? (
+                            <span className="shrink-0 rounded-md bg-[#22D3EE]/20 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#22D3EE]">
+                              ✓ Adoptada
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => adoptMission(m)}
+                              disabled={isAdopting}
+                              className="shrink-0 rounded-md bg-[#22D3EE] px-2.5 py-1 text-[11px] font-bold text-[#0D0D14] transition hover:brightness-110 disabled:opacity-50"
+                            >
+                              Adoptar
+                            </button>
+                          )
+                        ) : (
+                          <span className="shrink-0 rounded-md border border-[rgba(240,237,232,0.15)] px-2 py-1 text-[10px] uppercase tracking-wider text-[rgba(240,237,232,0.55)]">
+                            Proyecto
+                          </span>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+
+            <div className="mt-5 flex items-center gap-3">
               <Link
                 href={`/modulo02/areas/${sheetRow.key}`}
                 onClick={closeSheet}
-                className="text-sm font-medium text-[rgba(240,237,232,0.65)]"
+                className="text-xs font-medium text-[rgba(240,237,232,0.55)] underline"
               >
-                Ver visión →
+                Ver visión del área
               </Link>
               <button
                 type="button"
                 onClick={closeSheet}
-                className="mt-2 rounded-xl border border-[rgba(240,237,232,0.12)] py-3 text-sm font-medium text-[#F0EDE8]"
+                className="ml-auto rounded-xl border border-[rgba(240,237,232,0.12)] px-4 py-2 text-sm font-medium text-[#F0EDE8]"
               >
                 Cerrar
               </button>

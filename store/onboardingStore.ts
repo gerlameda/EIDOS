@@ -71,7 +71,7 @@ export interface OnboardingStore {
   nombre: string;
   nivel: OnboardingNivel;
   areaPrioritaria: string;
-  /** Respuestas Capa 1 (5 áreas); `null` = omitida. Persistido en sessionStorage. */
+  /** Respuestas Capa 1 (5 áreas); `null` = omitida. Persistido en localStorage. */
   capa1Saved: (Capa1AreaAnswer | null)[];
   capa2Areas: Capa2AreaStatus[];
   visionAreas: VisionArea[];
@@ -93,7 +93,7 @@ export interface OnboardingStore {
   saveRutinaBase: (rutina: RutinaBase) => void;
   saveSprintCommitment: (commitment: SprintCommitment) => void;
   completeModulo03: () => void;
-  /** Reinicia el store a sus valores por defecto y limpia sessionStorage. */
+  /** Reinicia el store a sus valores por defecto y limpia localStorage. */
   resetStore: () => void;
 }
 
@@ -189,7 +189,13 @@ export const useOnboardingStore = create<OnboardingStore>()(
     }),
     {
       name: "eidos-onboarding",
-      storage: createJSONStorage(() => sessionStorage),
+      // IMPORTANTE: localStorage (no sessionStorage). El flujo de confirmación
+      // de email abre una pestaña nueva; sessionStorage no viaja entre pestañas
+      // y el store quedaba vacío, sobrescribiendo los datos del usuario con
+      // defaults al hacer sync. Ver commit que introduce este cambio.
+      storage: createJSONStorage(() =>
+        typeof window !== "undefined" ? window.localStorage : sessionStorage,
+      ),
       merge: (persistedState, currentState) => {
         const p = persistedState as Partial<OnboardingStore>;
         return {
