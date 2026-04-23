@@ -9,7 +9,7 @@ const PROTECTED_PREFIXES = [
   "/modulo04",
 ];
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -53,10 +53,11 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/modulo01/:path*',
-    '/modulo02/:path*',
-    '/modulo03/:path*',
-    '/modulo04/:path*',
-    '/perfil/:path*',
+    "/modulo01/:path*",
+    "/modulo02/:path*",
+    "/modulo03/:path*",
+    "/modulo04/:path*",
+    "/dashboard/:path*",
+    "/perfil/:path*",
   ],
-}
+};
