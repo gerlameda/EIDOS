@@ -7,7 +7,7 @@ import {
   addUserHabit,
   archiveUserHabit,
 } from "@/lib/supabase/userHabits";
-import { normalizeNombreUsuario } from "@/store/onboardingStore";
+import { normalizeNombreUsuario } from "@/lib/onboarding/normalize";
 import type { Boss } from "@/types/boss";
 import type { HabitGroupKey, UserHabit } from "@/types/modulo04";
 

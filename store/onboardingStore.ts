@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { Capa1AreaAnswer } from "@/lib/modulo01/capa1-flow-data";
 import type { Capa2AreaStatus } from "@/lib/modulo01/capa2-types";
+import { normalizeNombreUsuario } from "@/lib/onboarding/normalize";
 import type { CriticalHabit, VisionArea } from "@/types/modulo02";
 import type {
   Manifiesto,
@@ -104,12 +105,11 @@ const clampNivel = (n: number): OnboardingNivel => {
   return x as OnboardingNivel;
 };
 
-/** "jOE"/"JOE" → "Joe" — usar siempre al persistir nombre. */
-export function normalizeNombreUsuario(raw: string): string {
-  const t = raw.trim();
-  if (!t) return "";
-  return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
-}
+// Re-export de la función pura viviendo en `lib/`. Mantener este re-export
+// para no romper los imports existentes (`@/store/onboardingStore`), pero las
+// Server Actions deben importar desde `@/lib/onboarding/normalize` para no
+// arrastrar Zustand / React al bundle del servidor.
+export { normalizeNombreUsuario } from "@/lib/onboarding/normalize";
 
 export const useOnboardingStore = create<OnboardingStore>()(
   persist(
