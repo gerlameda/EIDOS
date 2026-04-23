@@ -7,6 +7,7 @@ import {
   addUserHabit,
   archiveUserHabit,
 } from "@/lib/supabase/userHabits";
+import { normalizeNombreUsuario } from "@/store/onboardingStore";
 import type { Boss } from "@/types/boss";
 import type { HabitGroupKey, UserHabit } from "@/types/modulo04";
 
@@ -97,6 +98,47 @@ export async function upsertCheckinAction(payload: {
     return false;
   }
   return true;
+}
+
+/**
+ * Guarda/actualiza el `nombre` del usuario en eidos_profiles.
+ * Pensado como rescate: si el nombre quedó vacío por un race del onboarding,
+ * el dashboard permite corregirlo en vivo sin rehacer todo el flujo.
+ */
+export async function saveProfileNombreAction(
+  rawNombre: string,
+): Promise<{ ok: boolean; error: string | null; nombre: string | null }> {
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const nombre = normalizeNombreUsuario(rawNombre);
+  if (!nombre) {
+    return { ok: false, error: "Escribe al menos un nombre.", nombre: null };
+  }
+
+  const { error } = await supabase
+    .from("eidos_profiles")
+    .upsert({ id: user.id, nombre }, { onConflict: "id" });
+
+  if (error) {
+    console.error("saveProfileNombreAction upsert failed", {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+    });
+    return {
+      ok: false,
+      error: `No pudimos guardar (${error.code ?? "sin código"}): ${error.message}`,
+      nombre: null,
+    };
+  }
+
+  // Revalida todas las vistas que leen el nombre del layout del módulo 04.
+  revalidatePath("/modulo04", "layout");
+  return { ok: true, error: null, nombre };
 }
 
 export async function addUserHabitAction(payload: {

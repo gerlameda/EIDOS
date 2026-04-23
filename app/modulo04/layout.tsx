@@ -24,7 +24,11 @@ export default async function Modulo04Layout({
     .eq("id", user.id)
     .maybeSingle();
 
-  const nombre = (profile?.nombre as string) ?? "Jugador";
+  const rawNombre = (profile?.nombre as string | null | undefined) ?? "";
+  const nombreValido = rawNombre.trim().length > 0;
+  // Si no hay nombre, mostramos "Jugador" como placeholder pero también
+  // le pasamos al Shell la señal para abrir el prompt inline de rescate.
+  const nombre = nombreValido ? rawNombre : "Jugador";
   const capa1Saved = Array.isArray(profile?.capa1_saved)
     ? (profile.capa1_saved as (Capa1AreaAnswer | null)[])
     : [];
@@ -32,7 +36,11 @@ export default async function Modulo04Layout({
   const nivelLabel = global?.nivelLabel ?? "Despertando";
 
   return (
-    <Modulo04Shell nombre={nombre} nivelLabel={nivelLabel}>
+    <Modulo04Shell
+      nombre={nombre}
+      nivelLabel={nivelLabel}
+      needsNombre={!nombreValido}
+    >
       {children}
     </Modulo04Shell>
   );
