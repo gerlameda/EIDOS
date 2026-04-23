@@ -184,6 +184,8 @@ export default function CheckinPage({
 
   // Handlers de edición / setup
   const [pending, startTransition] = useTransition();
+  const [habitError, setHabitError] = useState<string | null>(null);
+
   async function handleAddHabit(
     groupKey: HabitGroupKey,
     label: string,
@@ -191,12 +193,26 @@ export default function CheckinPage({
   ): Promise<void> {
     const trimmed = label.trim();
     if (!trimmed) return;
-    const created = await addUserHabitAction({
+    // eslint-disable-next-line no-console
+    console.log("[EIDOS] addUserHabitAction →", {
       groupKey,
       label: trimmed,
       presetSlug,
     });
-    if (created) {
+    const result = await addUserHabitAction({
+      groupKey,
+      label: trimmed,
+      presetSlug,
+    });
+    // eslint-disable-next-line no-console
+    console.log("[EIDOS] addUserHabitAction ←", result);
+    if (result.error) {
+      setHabitError(result.error);
+      return;
+    }
+    if (result.habit) {
+      setHabitError(null);
+      const created = result.habit;
       startTransition(() => {
         setHabits((prev) => [...prev, created]);
       });
@@ -205,7 +221,12 @@ export default function CheckinPage({
   async function handleArchiveHabit(habitId: string): Promise<void> {
     // Optimista: quita de la lista local antes de confirmar.
     setHabits((prev) => prev.filter((h) => h.id !== habitId));
-    await archiveUserHabitAction(habitId);
+    const ok = await archiveUserHabitAction(habitId);
+    if (!ok) {
+      // Revertimos: el hábito vuelve a aparecer.
+      setHabits(initialUserHabits);
+      setHabitError("No se pudo archivar el hábito.");
+    }
   }
 
   const readOnly = mode === "checkin" && isTodayDone;
@@ -222,6 +243,7 @@ export default function CheckinPage({
         onRemove={handleArchiveHabit}
         pending={pending}
         canContinue={setupComplete}
+        errorMessage={habitError}
       />
     );
   }
@@ -464,6 +486,7 @@ function SetupView({
   onRemove,
   pending,
   canContinue,
+  errorMessage,
 }: {
   todayDate: string;
   habitsByGroup: Record<HabitGroupKey, UserHabit[]>;
@@ -476,6 +499,7 @@ function SetupView({
   onRemove: (id: string) => Promise<void>;
   pending: boolean;
   canContinue: boolean;
+  errorMessage: string | null;
 }) {
   // El CTA "Empezar check-in" recarga al modo checkin una vez que los 3 grupos
   // tengan ≥1 hábito. Como el modo se deriva del estado, simplemente forzamos
@@ -535,6 +559,29 @@ function SetupView({
               {groupsReady}/{HABIT_GROUP_ORDER.length} grupos listos
             </p>
           </div>
+
+          {/* Banner de error */}
+          {errorMessage ? (
+            <div className="mt-4 rounded-xl border border-[#EF4444]/40 bg-[#EF4444]/10 px-4 py-3 text-xs">
+              <p className="font-semibold text-[#EF4444]">
+                No se pudo guardar el hábito
+              </p>
+              <p className="mt-1 break-words text-[rgba(240,237,232,0.7)]">
+                {errorMessage}
+              </p>
+              {/relation .* does not exist|eidos_user_habits/i.test(
+                errorMessage,
+              ) ? (
+                <p className="mt-2 text-[rgba(240,237,232,0.7)]">
+                  Parece que falta correr la migración{" "}
+                  <code className="rounded bg-[#0D0D14] px-1 text-[#22D3EE]">
+                    supabase/modulo04-habits-schema.sql
+                  </code>{" "}
+                  en Supabase SQL Editor.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         {/* Secciones editables */}

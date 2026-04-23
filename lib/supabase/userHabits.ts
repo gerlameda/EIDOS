@@ -52,7 +52,7 @@ export async function getUserHabits(
 /**
  * Inserta un hábito nuevo para el usuario. Si viene de un preset (presetSlug),
  * respeta el índice único (user_id, preset_slug) — un segundo intento es no-op.
- * Devuelve el hábito insertado o null si hubo error/duplicado.
+ * Devuelve `{habit, error}` para que la UI pueda mostrar el mensaje real al usuario.
  */
 export async function addUserHabit(
   userId: string,
@@ -63,7 +63,7 @@ export async function addUserHabit(
     sortOrder?: number;
   },
   supabase?: SupabaseClient,
-): Promise<UserHabit | null> {
+): Promise<{ habit: UserHabit | null; error: string | null }> {
   const client = habitsClient(supabase);
 
   const { data, error } = await client
@@ -82,11 +82,17 @@ export async function addUserHabit(
 
   if (error || !data) {
     // eslint-disable-next-line no-console
-    console.error("addUserHabit error:", error);
-    return null;
+    console.error("[EIDOS] addUserHabit error:", error);
+    return {
+      habit: null,
+      error: error?.message ?? "No se pudo guardar el hábito.",
+    };
   }
 
-  return rowToUserHabit(data as Record<string, unknown>);
+  return {
+    habit: rowToUserHabit(data as Record<string, unknown>),
+    error: null,
+  };
 }
 
 /**

@@ -103,7 +103,7 @@ export async function addUserHabitAction(payload: {
   groupKey: HabitGroupKey;
   label: string;
   presetSlug?: string | null;
-}): Promise<UserHabit | null> {
+}): Promise<{ habit: UserHabit | null; error: string | null }> {
   const supabase = await createServerSupabaseClient();
   const {
     data: { user },
@@ -111,9 +111,9 @@ export async function addUserHabitAction(payload: {
   if (!user) redirect("/login");
 
   const label = payload.label.trim();
-  if (!label) return null;
+  if (!label) return { habit: null, error: "El nombre no puede estar vacío." };
 
-  const habit = await addUserHabit(
+  const result = await addUserHabit(
     user.id,
     {
       groupKey: payload.groupKey,
@@ -122,8 +122,8 @@ export async function addUserHabitAction(payload: {
     },
     supabase,
   );
-  if (habit) revalidatePath("/modulo04/checkin");
-  return habit;
+  if (result.habit) revalidatePath("/modulo04/checkin");
+  return result;
 }
 
 export async function archiveUserHabitAction(habitId: string): Promise<boolean> {
