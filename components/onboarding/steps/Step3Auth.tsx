@@ -45,9 +45,12 @@ export function Step3Auth() {
       setLoading(true);
       const supabase = createClient();
       const { data, error: signUpError } = await supabase.auth.signUp({
-        email: trimmed,
+        email,
         password,
       });
+
+      console.log("[EIDOS] signUp data:", JSON.stringify(data));
+      console.log("[EIDOS] signUp error:", signUpError);
 
       if (signUpError) {
         setError(signUpError.message);
@@ -60,6 +63,13 @@ export function Step3Auth() {
           console.error,
         );
         window.location.href = "/onboarding/4";
+        return;
+      }
+
+      if (data.user && !data.session) {
+        console.log("[EIDOS] user created but no session - confirm email might be ON");
+        setError("Cuenta creada pero sin sesión. Verifica config de Supabase.");
+        setLoading(false);
         return;
       }
 
