@@ -1,5 +1,5 @@
-import { MagicLinkForm } from "@/components/auth/MagicLinkForm";
+import { AuthForm } from "@/components/auth/AuthForm";
 
 export default function OnboardingAuthPage() {
-  return <MagicLinkForm variant="onboarding" />;
+  return <AuthForm variant="onboarding" />;
 }

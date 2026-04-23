@@ -94,7 +94,7 @@ export async function GET(request: Request) {
     error: userError,
   } = await supabase.auth.getUser();
   if (userError || !user) {
-    return NextResponse.redirect(`${origin}/onboarding/1`);
+    return NextResponse.redirect(`${origin}/onboarding/4`);
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -104,7 +104,9 @@ export async function GET(request: Request) {
     .maybeSingle();
 
   if (profileError || !profile) {
-    return NextResponse.redirect(`${origin}/onboarding/1`);
+    // Sin perfil aún (usuario recién creado antes de que el trigger corra)
+    // mandamos al primer paso real del onboarding para no pisar Step1Impacto.
+    return NextResponse.redirect(`${origin}/onboarding/4`);
   }
 
   const path = redirectPathFromProfile(
