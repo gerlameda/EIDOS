@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState, type CSSProperties } from "react";
-import { useRouter } from "next/navigation";
 import { useOnboardingNavRegistration } from "@/components/onboarding/onboarding-nav-context";
 import { createClient } from "@/lib/supabase/client";
 import { syncProfileToSupabase } from "@/lib/onboarding/sync-profile";
@@ -17,7 +16,6 @@ const labelClass =
   "mb-2 block text-xs text-[rgba(240,237,232,0.6)]";
 
 export function Step3Auth() {
-  const router = useRouter();
   const { setHandlers } = useOnboardingNavRegistration();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -58,17 +56,17 @@ export function Step3Auth() {
       }
 
       if (data.session) {
-        router.push("/onboarding/4");
         syncProfileToSupabase(useOnboardingStore.getState()).catch(
           console.error,
         );
+        window.location.href = "/onboarding/4";
         return;
       }
 
       setError("Hubo un error, intenta de nuevo.");
       setLoading(false);
     },
-    [email, password, router],
+    [email, password],
   );
 
   const canSubmit =
