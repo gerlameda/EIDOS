@@ -4,6 +4,9 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { CheckinStep, DailyMission, MissionKey } from "@/types/modulo04";
 
+/** Respuesta del usuario a un hábito en el check-in. `undefined` = sin tocar. */
+export type HabitStatus = "yes" | "no";
+
 interface DailyState {
   // Misiones del día
   missions: DailyMission[];
@@ -19,9 +22,13 @@ interface DailyState {
   setCheckinClosed: (closed: boolean) => void;
 
   // Hábitos agrupados (FISICOS / ESPIRITUALES / MENTALES) marcados hoy.
-  habitIdsCompleted: string[];
-  setHabitIdsCompleted: (ids: string[]) => void;
-  toggleHabitId: (id: string) => void;
+  // Map parcial: si no hay entry para un habitId, significa "sin tocar".
+  habitStatuses: Record<string, HabitStatus>;
+  setHabitStatus: (id: string, status: HabitStatus) => void;
+  /** Reinicia todos los statuses (usado al resetear el día). */
+  clearHabitStatuses: () => void;
+  /** Marca varios hábitos como "yes" — útil al hidratar desde Supabase. */
+  hydrateHabitStatuses: (yesIds: string[]) => void;
 
   // Respuesta de reflexión libre
   reflectionAnswer: string;
@@ -50,14 +57,18 @@ export const useDailyStore = create<DailyState>()(
       checkinClosed: false,
       setCheckinClosed: (closed) => set({ checkinClosed: closed }),
 
-      habitIdsCompleted: [],
-      setHabitIdsCompleted: (ids) => set({ habitIdsCompleted: ids }),
-      toggleHabitId: (id) =>
+      habitStatuses: {},
+      setHabitStatus: (id, status) =>
         set((state) => ({
-          habitIdsCompleted: state.habitIdsCompleted.includes(id)
-            ? state.habitIdsCompleted.filter((x) => x !== id)
-            : [...state.habitIdsCompleted, id],
+          habitStatuses: { ...state.habitStatuses, [id]: status },
         })),
+      clearHabitStatuses: () => set({ habitStatuses: {} }),
+      hydrateHabitStatuses: (yesIds) =>
+        set((state) => {
+          const next = { ...state.habitStatuses };
+          for (const id of yesIds) next[id] = "yes";
+          return { habitStatuses: next };
+        }),
 
       reflectionAnswer: "",
       setReflectionAnswer: (answer) => set({ reflectionAnswer: answer }),
@@ -68,7 +79,7 @@ export const useDailyStore = create<DailyState>()(
           checkinStep: 1,
           checkinDate: null,
           checkinClosed: false,
-          habitIdsCompleted: [],
+          habitStatuses: {},
           reflectionAnswer: "",
         }),
     }),

@@ -97,11 +97,20 @@ export default function CheckinPage({
     setReflectionAnswer,
     checkinClosed,
     setCheckinClosed,
-    habitIdsCompleted,
-    setHabitIdsCompleted,
-    toggleHabitId,
+    habitStatuses,
+    setHabitStatus,
+    hydrateHabitStatuses,
   } = useDailyStore();
   const { activeBoss, streakDays, incrementStreak } = useBossStore();
+
+  /** IDs que el usuario respondió "sí" hoy — lo que se persiste en Supabase. */
+  const habitIdsCompleted = useMemo(
+    () =>
+      Object.entries(habitStatuses)
+        .filter(([, v]) => v === "yes")
+        .map(([id]) => id),
+    [habitStatuses],
+  );
 
   const habitsByGroup = useMemo(() => groupHabits(habits), [habits]);
 
@@ -122,7 +131,7 @@ export default function CheckinPage({
   // Hidratamos el store con lo que venga de Supabase (solo una vez).
   useEffect(() => {
     if (initialHabitIdsCompleted.length > 0) {
-      setHabitIdsCompleted(initialHabitIdsCompleted);
+      hydrateHabitStatuses(initialHabitIdsCompleted);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -393,8 +402,8 @@ export default function CheckinPage({
                   <ToggleRow
                     key={h.id}
                     label={h.label}
-                    value={habitIdsCompleted.includes(h.id)}
-                    onChange={() => toggleHabitId(h.id)}
+                    value={habitStatuses[h.id] ?? null}
+                    onChange={(v) => setHabitStatus(h.id, v)}
                     disabled={readOnly}
                   />
                 ))
@@ -764,8 +773,9 @@ function ToggleRow({
   disabled,
 }: {
   label: string;
-  value: boolean;
-  onChange: (v: boolean) => void;
+  /** "yes" | "no" | null (sin tocar) */
+  value: "yes" | "no" | null;
+  onChange: (v: "yes" | "no") => void;
   disabled?: boolean;
 }) {
   return (
@@ -773,16 +783,20 @@ function ToggleRow({
       <p className="text-sm text-[#F0EDE8]">{label}</p>
       <div className="flex items-center gap-1.5">
         <ToggleButton
-          active={!value}
-          onClick={() => !disabled && onChange(false)}
+          active={value === "no"}
+          onClick={() => {
+            if (!disabled) onChange("no");
+          }}
           disabled={disabled}
           icon="×"
           variant="no"
           aria-label="No"
         />
         <ToggleButton
-          active={value}
-          onClick={() => !disabled && onChange(true)}
+          active={value === "yes"}
+          onClick={() => {
+            if (!disabled) onChange("yes");
+          }}
           disabled={disabled}
           icon="✓"
           variant="yes"
