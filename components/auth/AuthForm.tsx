@@ -33,27 +33,33 @@ export function AuthForm({ variant }: AuthFormProps) {
     const supabase = createClient();
 
     if (variant === "onboarding") {
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-      });
+      try {
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+        });
 
-      if (signUpError) {
-        setError(signUpError.message);
+        if (signUpError) {
+          setError(signUpError.message);
+          setLoading(false);
+          return;
+        }
+
+        if (data.session) {
+          await syncProfileToSupabase(useOnboardingStore.getState());
+          router.push("/onboarding/nombre");
+          return;
+        }
+
+        setError(
+          "Cuenta creada pero sin sesión. Revisa la configuración de Supabase (Confirm email debe estar OFF).",
+        );
         setLoading(false);
-        return;
+      } catch (err) {
+        console.error("[EIDOS] signUp threw:", err);
+        setError("Error inesperado. Intenta de nuevo.");
+        setLoading(false);
       }
-
-      if (data.session) {
-        await syncProfileToSupabase(useOnboardingStore.getState());
-        router.push("/onboarding/nombre");
-        return;
-      }
-
-      setError(
-        "Cuenta creada. Confirma tu correo para continuar e inicia sesión.",
-      );
-      setLoading(false);
       return;
     }
 

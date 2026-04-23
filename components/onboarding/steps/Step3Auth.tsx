@@ -43,38 +43,48 @@ export function Step3Auth() {
       }
 
       setLoading(true);
-      const supabase = createClient();
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-      });
+      try {
+        const supabase = createClient();
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email: trimmed,
+          password,
+        });
 
-      console.log("[EIDOS] signUp data:", JSON.stringify(data));
-      console.log("[EIDOS] signUp error:", signUpError);
+        console.log("[EIDOS] signUp data:", data);
+        console.log("[EIDOS] signUp error:", signUpError);
 
-      if (signUpError) {
-        setError(signUpError.message);
-        setLoading(false);
-        return;
-      }
+        if (signUpError) {
+          setError(signUpError.message);
+          setLoading(false);
+          return;
+        }
 
-      if (data.session) {
-        syncProfileToSupabase(useOnboardingStore.getState()).catch(
-          console.error,
-        );
+        if (!data.session) {
+          // Supabase creó el usuario pero no emitió sesión. En 99% de los casos
+          // es porque "Confirm email" está ON en el dashboard.
+          console.warn(
+            "[EIDOS] signUp devolvió user sin session — revisa 'Confirm email' en Supabase",
+          );
+          setError(
+            "Cuenta creada pero sin sesión. Revisa la configuración de Supabase (Confirm email debe estar OFF).",
+          );
+          setLoading(false);
+          return;
+        }
+
+        // Sesión activa inmediata. Persistimos el estado actual del onboarding
+        // ANTES de redirigir para no perder datos en el full-reload.
+        await syncProfileToSupabase(useOnboardingStore.getState());
+
+        // window.location.href fuerza un full reload, lo cual garantiza que los
+        // RSC/middleware vean las cookies de sesión recién escritas por
+        // @supabase/ssr en la siguiente request.
         window.location.href = "/onboarding/4";
-        return;
-      }
-
-      if (data.user && !data.session) {
-        console.log("[EIDOS] user created but no session - confirm email might be ON");
-        setError("Cuenta creada pero sin sesión. Verifica config de Supabase.");
+      } catch (err) {
+        console.error("[EIDOS] signUp threw:", err);
+        setError("Error inesperado. Intenta de nuevo.");
         setLoading(false);
-        return;
       }
-
-      setError("Hubo un error, intenta de nuevo.");
-      setLoading(false);
     },
     [email, password],
   );
