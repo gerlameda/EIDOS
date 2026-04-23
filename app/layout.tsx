@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AppProviders } from "@/components/providers/app-providers";
 import { SupabaseSyncProvider } from "@/components/SupabaseSyncProvider";
+import { SyncStatusBanner } from "@/components/SyncStatusBanner";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -32,6 +33,7 @@ export default function RootLayout({
       <body className="flex min-h-full flex-col">
         <SupabaseSyncProvider>
           <AppProviders>{children}</AppProviders>
+          <SyncStatusBanner />
         </SupabaseSyncProvider>
       </body>
     </html>
