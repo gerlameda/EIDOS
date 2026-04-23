@@ -38,6 +38,29 @@ export async function getTodayCheckin(
   return rowToCheckin(data as Record<string, unknown>);
 }
 
+/**
+ * Devuelve el conjunto de fechas ("YYYY-MM-DD") del usuario con check-in
+ * registrado dentro del rango [fromDate, toDate] (inclusivo en ambos extremos).
+ * Sirve para pintar los dots de completitud del date-scroll estilo Whoop.
+ */
+export async function getRecentCheckinDates(
+  userId: string,
+  fromDate: string,
+  toDate: string,
+  supabase?: SupabaseClient,
+): Promise<Set<string>> {
+  const client = checkinClient(supabase);
+  const { data, error } = await client
+    .from("eidos_daily_checkins")
+    .select("date")
+    .eq("user_id", userId)
+    .gte("date", fromDate)
+    .lte("date", toDate);
+
+  if (error || !data) return new Set();
+  return new Set((data as { date: string }[]).map((r) => r.date));
+}
+
 export async function upsertCheckin(
   userId: string,
   payload: {

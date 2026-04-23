@@ -6,16 +6,55 @@ import { selectReflectionQuestion } from "@/lib/modulo04/checkinContext";
 import { upsertCheckinAction } from "../actions";
 import { useBossStore } from "@/store/bossStore";
 import { useDailyStore } from "@/store/dailyStore";
-import type { CheckinStep } from "@/types/modulo04";
 
 interface CheckinPageProps {
   todayDate: string;
   alreadyClosed: boolean;
+  /** Últimos 7 días en formato "YYYY-MM-DD", ordenados ascendente (último = hoy). */
+  recentDays: string[];
+  /** Fechas dentro del rango con check-in registrado en Supabase. */
+  completedDates: string[];
+}
+
+const DAYS_ES_SHORT = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+const MONTHS_ES_LONG = [
+  "enero",
+  "febrero",
+  "marzo",
+  "abril",
+  "mayo",
+  "junio",
+  "julio",
+  "agosto",
+  "septiembre",
+  "octubre",
+  "noviembre",
+  "diciembre",
+];
+
+function parseISO(iso: string): Date {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d));
+}
+
+function dayLabel(iso: string): { name: string; num: string } {
+  const d = parseISO(iso);
+  return {
+    name: DAYS_ES_SHORT[d.getUTCDay()],
+    num: String(d.getUTCDate()),
+  };
+}
+
+function longDateLabel(iso: string): string {
+  const d = parseISO(iso);
+  return `${DAYS_ES_SHORT[d.getUTCDay()].toLowerCase()} ${d.getUTCDate()} de ${MONTHS_ES_LONG[d.getUTCMonth()]}`;
 }
 
 export default function CheckinPage({
   todayDate,
   alreadyClosed,
+  recentDays,
+  completedDates,
 }: CheckinPageProps) {
   const {
     missions,
@@ -53,27 +92,24 @@ export default function CheckinPage({
     ],
   );
 
-  const [step, setStep] = useState<CheckinStep>(alreadyClosed ? "summary" : 1);
   const [saving, setSaving] = useState(false);
+  const completedSet = useMemo(
+    () => new Set(completedDates),
+    [completedDates],
+  );
+  // Hoy también cuenta como "completo" si ya cerraste.
+  const isTodayDone = alreadyClosed || checkinClosed;
 
   useEffect(() => {
-    if (alreadyClosed) {
-      setCheckinClosed(true);
-    }
+    if (alreadyClosed) setCheckinClosed(true);
   }, [alreadyClosed, setCheckinClosed]);
-
-  const totalDamage = completedMissions.reduce(
-    (sum, m) => sum + m.damageAmount,
-    0,
-  );
-  const completedKeys = completedMissions.map((m) => m.key);
 
   async function handleFinish() {
     setSaving(true);
     try {
       const ok = await upsertCheckinAction({
         date: todayDate,
-        habitsCompleted: completedKeys,
+        habitsCompleted: completedMissions.map((m) => m.key),
         sleepOk,
         foodOk,
         reflectionQuestion,
@@ -82,186 +118,308 @@ export default function CheckinPage({
       if (!ok) return;
       incrementStreak();
       setCheckinClosed(true);
-      setStep("summary");
     } finally {
       setSaving(false);
     }
   }
 
-  if (step === "summary" || checkinClosed) {
-    return (
-      <div className="px-5 py-6 text-[#F0EDE8]">
-        <div className="mx-auto w-full max-w-lg space-y-6">
-          <h1 className="text-lg font-bold">Tu día</h1>
-          <div className="space-y-3 rounded-xl border border-[#2A2A3A] bg-[#1A1A26] p-5">
-            <p className="text-sm text-[#F0EDE8]">
-              Completaste{" "}
-              <span className="font-bold text-[#22D3EE]">
-                {completedMissions.length}
-              </span>{" "}
-              de {missions.length} misiones.
-            </p>
-            {totalDamage > 0 && (
-              <p className="text-sm font-bold text-[#22D3EE]">
-                El boss perdió {totalDamage} HP.
-              </p>
-            )}
-            <p className="text-sm text-[rgba(240,237,232,0.6)]">
-              {sleepOk
-                ? "Dormiste bien — eso cuenta."
-                : "El descanso también es parte del juego."}
-            </p>
-            <p className="text-xs text-[rgba(240,237,232,0.4)]">
-              Mañana tienes otra oportunidad.
-            </p>
-          </div>
-          <Link
-            href="/modulo04/journal"
-            className="block w-full rounded-xl bg-[#22D3EE] py-3 text-center text-sm font-bold text-[#0D0D14]"
-          >
-            Escribir en el journal →
-          </Link>
-          <Link
-            href="/modulo04"
-            className="block text-center text-xs text-[rgba(240,237,232,0.5)] underline"
-          >
-            ← Volver al campo base
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  const readOnly = isTodayDone;
 
   return (
-    <div className="px-5 py-6 text-[#F0EDE8]">
-      <div className="mx-auto w-full max-w-lg space-y-6">
-        {/* Progress */}
-        <div className="flex items-center justify-between">
-          <Link
-            href="/modulo04"
-            className="text-xs text-[rgba(240,237,232,0.5)]"
-          >
-            ← Campo base
-          </Link>
-          <p className="text-xs text-[rgba(240,237,232,0.5)]">
-            PASO {step} DE 3
-          </p>
+    <div className="min-h-screen bg-[#0D0D14] pb-28 text-[#F0EDE8]">
+      <div className="mx-auto w-full max-w-lg">
+        {/* Header */}
+        <div className="sticky top-0 z-10 bg-[#0D0D14]/95 px-5 pb-3 pt-5 backdrop-blur-sm">
+          <div className="grid grid-cols-[auto_1fr_auto] items-center">
+            <Link
+              href="/modulo04"
+              aria-label="Cerrar"
+              className="text-xl text-[rgba(240,237,232,0.7)] hover:text-[#F0EDE8]"
+            >
+              ×
+            </Link>
+            <h1 className="text-center text-xs font-semibold tracking-[0.24em] text-[rgba(240,237,232,0.7)]">
+              TU DÍA
+            </h1>
+            <span aria-hidden className="w-5" />
+          </div>
         </div>
 
-        {/* Paso 1 — ¿Qué completaste? */}
-        {step === 1 && (
-          <section className="space-y-4">
-            <h2 className="text-base font-bold">¿Qué completaste hoy?</h2>
-            <ul className="space-y-2">
-              {missions.map((mission) => (
-                <li
-                  key={mission.key}
-                  className="flex items-center justify-between rounded-lg border border-[#2A2A3A] bg-[#1A1A26] px-4 py-3"
+        {/* Date scroll */}
+        <div className="px-5 pt-2">
+          <div
+            className="flex snap-x snap-mandatory items-end gap-2 overflow-x-auto pb-2"
+            style={{ scrollbarWidth: "none" }}
+          >
+            {recentDays.map((iso) => {
+              const isToday = iso === todayDate;
+              const completed = isToday
+                ? isTodayDone
+                : completedSet.has(iso);
+              const { name, num } = dayLabel(iso);
+              return (
+                <div
+                  key={iso}
+                  className={`flex shrink-0 snap-start flex-col items-center rounded-full border px-3 py-2 text-center transition-colors ${
+                    isToday
+                      ? "border-[#F0EDE8]/60 bg-[#1A1A26]"
+                      : "border-transparent bg-[#1A1A26]/40"
+                  }`}
+                  style={{ minWidth: isToday ? 62 : 54 }}
+                  aria-current={isToday ? "date" : undefined}
                 >
-                  <p className="text-sm text-[#F0EDE8]">{mission.habitText}</p>
-                  {mission.markedAt ? (
-                    <span className="text-xs text-[rgba(240,237,232,0.4)]">
-                      ya registrado
-                    </span>
-                  ) : (
-                    <span className="text-xs text-[rgba(240,237,232,0.3)]">
-                      ○
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
-            <button
-              type="button"
-              onClick={() => setStep(2)}
-              className="w-full rounded-xl bg-[#22D3EE] py-3 text-sm font-bold text-[#0D0D14]"
-            >
-              Continuar →
-            </button>
-          </section>
-        )}
-
-        {/* Paso 2 — ¿Cómo estuviste? */}
-        {step === 2 && (
-          <section className="space-y-4">
-            <h2 className="text-base font-bold">¿Cómo estuviste?</h2>
-            <div className="grid grid-cols-2 gap-3">
-              {/* Sueño */}
-              <div className="space-y-2 rounded-xl border border-[#2A2A3A] bg-[#1A1A26] p-4">
-                <p className="text-center text-sm">😴 Sueño</p>
-                <div className="flex justify-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setSleepOk(true)}
-                    className={`rounded-lg px-3 py-1 text-xs font-bold ${sleepOk ? "bg-[#22D3EE] text-[#0D0D14]" : "bg-[#2A2A3A] text-[#F0EDE8]"}`}
+                  <span className="text-[10px] uppercase tracking-wider text-[rgba(240,237,232,0.5)]">
+                    {name}
+                  </span>
+                  <span
+                    className={`text-base font-medium ${
+                      isToday
+                        ? "text-[#F0EDE8]"
+                        : "text-[rgba(240,237,232,0.8)]"
+                    }`}
                   >
-                    Bien
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSleepOk(false)}
-                    className={`rounded-lg px-3 py-1 text-xs font-bold ${!sleepOk ? "bg-[#C9A84C] text-[#0D0D14]" : "bg-[#2A2A3A] text-[#F0EDE8]"}`}
-                  >
-                    Mal
-                  </button>
+                    {num}
+                  </span>
+                  <span
+                    aria-hidden
+                    className="mt-1 h-1.5 w-1.5 rounded-full"
+                    style={{
+                      backgroundColor: completed
+                        ? "#22D3EE"
+                        : "rgba(240,237,232,0.18)",
+                    }}
+                  />
                 </div>
-              </div>
-              {/* Comida */}
-              <div className="space-y-2 rounded-xl border border-[#2A2A3A] bg-[#1A1A26] p-4">
-                <p className="text-center text-sm">🍎 Comida</p>
-                <div className="flex justify-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setFoodOk(true)}
-                    className={`rounded-lg px-3 py-1 text-xs font-bold ${foodOk ? "bg-[#22D3EE] text-[#0D0D14]" : "bg-[#2A2A3A] text-[#F0EDE8]"}`}
-                  >
-                    Bien
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFoodOk(false)}
-                    className={`rounded-lg px-3 py-1 text-xs font-bold ${!foodOk ? "bg-[#C9A84C] text-[#0D0D14]" : "bg-[#2A2A3A] text-[#F0EDE8]"}`}
-                  >
-                    Mal
-                  </button>
-                </div>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setStep(3)}
-              className="w-full rounded-xl bg-[#22D3EE] py-3 text-sm font-bold text-[#0D0D14]"
-            >
-              Continuar →
-            </button>
-          </section>
-        )}
+              );
+            })}
+          </div>
+        </div>
 
-        {/* Paso 3 — Reflexión */}
-        {step === 3 && (
-          <section className="space-y-4">
-            <h2 className="text-base font-bold">Reflexión del día</h2>
-            <p className="text-sm italic text-[rgba(240,237,232,0.7)]">
+        {/* Title */}
+        <div className="px-5 pt-6">
+          <h2 className="text-2xl font-semibold leading-tight">
+            {readOnly
+              ? `${capitalizar(longDateLabel(todayDate))} — día cerrado`
+              : `¿Cómo cerramos el ${longDateLabel(todayDate)}?`}
+          </h2>
+        </div>
+
+        {/* Sección: Misiones */}
+        <Section title="MISIONES">
+          {missions.length === 0 ? (
+            <EmptyRow text="No hay misiones para hoy." />
+          ) : (
+            missions.map((m) => (
+              <ReadonlyRow
+                key={m.key}
+                label={m.habitText}
+                done={m.markedAt !== null}
+              />
+            ))
+          )}
+          <p className="px-1 pt-1 text-[11px] text-[rgba(240,237,232,0.4)]">
+            Las misiones se marcan durante el día desde el Campo Base.
+          </p>
+        </Section>
+
+        {/* Sección: Cómo estuviste (toggles) */}
+        <Section title="CÓMO ESTUVISTE">
+          <ToggleRow
+            label="¿Dormiste bien?"
+            value={sleepOk}
+            onChange={setSleepOk}
+            disabled={readOnly}
+          />
+          <ToggleRow
+            label="¿Comiste bien?"
+            value={foodOk}
+            onChange={setFoodOk}
+            disabled={readOnly}
+          />
+        </Section>
+
+        {/* Sección: Reflexión */}
+        <Section title="REFLEXIÓN">
+          <div className="rounded-xl border border-[#2A2A3A] bg-[#1A1A26] p-4">
+            <p className="text-sm italic text-[rgba(240,237,232,0.8)]">
               {`"${reflectionQuestion}"`}
             </p>
             <textarea
               value={reflectionAnswer}
               onChange={(e) => setReflectionAnswer(e.target.value)}
-              placeholder="Escribe aquí..."
+              placeholder={readOnly ? "" : "Escribe aquí..."}
               rows={4}
-              className="w-full rounded-xl border border-[#2A2A3A] bg-[#1A1A26] px-4 py-3 text-sm text-[#F0EDE8] placeholder-[rgba(240,237,232,0.3)] outline-none focus:border-[#22D3EE]"
+              disabled={readOnly}
+              className="mt-3 w-full rounded-lg border border-[#2A2A3A] bg-[#0D0D14] px-3 py-2 text-sm text-[#F0EDE8] placeholder-[rgba(240,237,232,0.3)] outline-none focus:border-[#22D3EE] disabled:opacity-60"
             />
+          </div>
+        </Section>
+
+        {/* Resumen compacto cuando ya cerraste */}
+        {readOnly ? (
+          <div className="px-5 pt-4">
+            <div className="rounded-xl border border-[#2A2A3A] bg-[#1A1A26] p-4 text-sm">
+              <p>
+                Completaste{" "}
+                <span className="font-bold text-[#22D3EE]">
+                  {completedMissions.length}
+                </span>{" "}
+                de {missions.length} misiones.
+              </p>
+              <p className="mt-1 text-xs text-[rgba(240,237,232,0.5)]">
+                Mañana tienes otra oportunidad.
+              </p>
+            </div>
+            <Link
+              href="/modulo04/journal"
+              className="mt-3 block w-full rounded-xl bg-[#22D3EE] py-3 text-center text-sm font-bold text-[#0D0D14]"
+            >
+              Escribir en el journal →
+            </Link>
+            <Link
+              href="/modulo04"
+              className="mt-3 block text-center text-xs text-[rgba(240,237,232,0.5)] underline"
+            >
+              ← Volver al campo base
+            </Link>
+          </div>
+        ) : null}
+      </div>
+
+      {/* CTA sticky */}
+      {!readOnly ? (
+        <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-[#2A2A3A] bg-[#0D0D14]/95 backdrop-blur-sm">
+          <div className="mx-auto flex w-full max-w-lg px-5 py-4">
             <button
               type="button"
               onClick={() => void handleFinish()}
               disabled={saving}
-              className="w-full rounded-xl bg-[#C9A84C] py-3 text-sm font-bold text-[#0D0D14] disabled:opacity-50"
+              className="w-full rounded-xl bg-[#F0EDE8] py-3 text-sm font-bold tracking-[0.14em] text-[#0D0D14] transition-opacity disabled:opacity-50"
             >
-              {saving ? "Guardando..." : "Cerrar mi día →"}
+              {saving ? "GUARDANDO..." : "CERRAR MI DÍA"}
             </button>
-          </section>
-        )}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/* ───────────────────────────── Subcomponentes ───────────────────────────── */
+
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="px-5 pt-6">
+      <p className="mb-2 text-[11px] font-semibold tracking-[0.24em] text-[rgba(240,237,232,0.5)]">
+        {title}
+      </p>
+      <div className="space-y-2">{children}</div>
+    </section>
+  );
+}
+
+function ToggleRow({
+  label,
+  value,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-[#2A2A3A] bg-[#1A1A26] px-4 py-3">
+      <p className="text-sm text-[#F0EDE8]">{label}</p>
+      <div className="flex items-center gap-1.5">
+        <ToggleButton
+          active={!value}
+          onClick={() => !disabled && onChange(false)}
+          disabled={disabled}
+          icon="×"
+          variant="no"
+          aria-label="No"
+        />
+        <ToggleButton
+          active={value}
+          onClick={() => !disabled && onChange(true)}
+          disabled={disabled}
+          icon="✓"
+          variant="yes"
+          aria-label="Sí"
+        />
       </div>
     </div>
   );
+}
+
+function ToggleButton({
+  active,
+  onClick,
+  disabled,
+  icon,
+  variant,
+  ...rest
+}: {
+  active: boolean;
+  onClick: () => void;
+  disabled?: boolean;
+  icon: string;
+  variant: "yes" | "no";
+} & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  const activeBg = variant === "yes" ? "#22D3EE" : "#C9A84C";
+  const activeText = "#0D0D14";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="flex h-9 w-9 items-center justify-center rounded-lg text-base font-bold transition-colors disabled:opacity-50"
+      style={{
+        backgroundColor: active ? activeBg : "#2A2A3A",
+        color: active ? activeText : "rgba(240,237,232,0.7)",
+      }}
+      {...rest}
+    >
+      {icon}
+    </button>
+  );
+}
+
+function ReadonlyRow({ label, done }: { label: string; done: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-[#2A2A3A] bg-[#1A1A26] px-4 py-3">
+      <p className="text-sm text-[#F0EDE8]">{label}</p>
+      <span
+        aria-label={done ? "completada" : "pendiente"}
+        className="flex h-9 w-9 items-center justify-center rounded-lg text-base font-bold"
+        style={{
+          backgroundColor: done ? "#22D3EE" : "#2A2A3A",
+          color: done ? "#0D0D14" : "rgba(240,237,232,0.4)",
+        }}
+      >
+        {done ? "✓" : "○"}
+      </span>
+    </div>
+  );
+}
+
+function EmptyRow({ text }: { text: string }) {
+  return (
+    <div className="rounded-xl border border-dashed border-[#2A2A3A] bg-[#1A1A26]/40 px-4 py-3">
+      <p className="text-sm text-[rgba(240,237,232,0.5)]">{text}</p>
+    </div>
+  );
+}
+
+function capitalizar(s: string): string {
+  if (!s) return s;
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
