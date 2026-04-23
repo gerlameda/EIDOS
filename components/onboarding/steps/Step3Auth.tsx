@@ -58,8 +58,10 @@ export function Step3Auth() {
       }
 
       if (data.session) {
-        await syncProfileToSupabase(useOnboardingStore.getState());
         router.push("/onboarding/4");
+        syncProfileToSupabase(useOnboardingStore.getState()).catch(
+          console.error,
+        );
         return;
       }
 
