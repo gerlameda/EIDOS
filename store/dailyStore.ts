@@ -18,11 +18,12 @@ interface DailyState {
   checkinClosed: boolean;
   setCheckinClosed: (closed: boolean) => void;
 
-  // Respuestas del check-in
-  sleepOk: boolean;
-  setSleepOk: (ok: boolean) => void;
-  foodOk: boolean;
-  setFoodOk: (ok: boolean) => void;
+  // Hábitos agrupados (FISICOS / ESPIRITUALES / MENTALES) marcados hoy.
+  habitIdsCompleted: string[];
+  setHabitIdsCompleted: (ids: string[]) => void;
+  toggleHabitId: (id: string) => void;
+
+  // Respuesta de reflexión libre
   reflectionAnswer: string;
   setReflectionAnswer: (answer: string) => void;
 
@@ -49,10 +50,15 @@ export const useDailyStore = create<DailyState>()(
       checkinClosed: false,
       setCheckinClosed: (closed) => set({ checkinClosed: closed }),
 
-      sleepOk: true,
-      setSleepOk: (ok) => set({ sleepOk: ok }),
-      foodOk: true,
-      setFoodOk: (ok) => set({ foodOk: ok }),
+      habitIdsCompleted: [],
+      setHabitIdsCompleted: (ids) => set({ habitIdsCompleted: ids }),
+      toggleHabitId: (id) =>
+        set((state) => ({
+          habitIdsCompleted: state.habitIdsCompleted.includes(id)
+            ? state.habitIdsCompleted.filter((x) => x !== id)
+            : [...state.habitIdsCompleted, id],
+        })),
+
       reflectionAnswer: "",
       setReflectionAnswer: (answer) => set({ reflectionAnswer: answer }),
 
@@ -62,8 +68,7 @@ export const useDailyStore = create<DailyState>()(
           checkinStep: 1,
           checkinDate: null,
           checkinClosed: false,
-          sleepOk: true,
-          foodOk: true,
+          habitIdsCompleted: [],
           reflectionAnswer: "",
         }),
     }),

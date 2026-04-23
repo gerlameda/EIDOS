@@ -12,8 +12,7 @@ function rowToCheckin(row: Record<string, unknown>): DailyCheckin {
     userId: row.user_id as string,
     date: row.date as string,
     habitsCompleted: (row.habits_completed as string[]) ?? [],
-    sleepOk: row.sleep_ok as boolean,
-    foodOk: row.food_ok as boolean,
+    habitIdsCompleted: (row.habit_ids_completed as string[]) ?? [],
     reflectionQuestion: row.reflection_question as string,
     reflectionAnswer: (row.reflection_answer as string | null) ?? null,
     createdAt: row.created_at as string,
@@ -66,8 +65,7 @@ export async function upsertCheckin(
   payload: {
     date: string;
     habitsCompleted: MissionKey[];
-    sleepOk: boolean;
-    foodOk: boolean;
+    habitIdsCompleted: string[];
     reflectionQuestion: string;
     reflectionAnswer: string | null;
   },
@@ -78,8 +76,7 @@ export async function upsertCheckin(
       user_id: userId,
       date: payload.date,
       habits_completed: payload.habitsCompleted,
-      sleep_ok: payload.sleepOk,
-      food_ok: payload.foodOk,
+      habit_ids_completed: payload.habitIdsCompleted,
       reflection_question: payload.reflectionQuestion,
       reflection_answer: payload.reflectionAnswer,
     },

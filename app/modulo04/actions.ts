@@ -63,8 +63,7 @@ export async function createBossAction(
 export async function upsertCheckinAction(payload: {
   date: string;
   habitsCompleted: string[];
-  sleepOk: boolean;
-  foodOk: boolean;
+  habitIdsCompleted: string[];
   reflectionQuestion: string;
   reflectionAnswer: string | null;
 }): Promise<boolean> {
@@ -79,8 +78,7 @@ export async function upsertCheckinAction(payload: {
       user_id: user.id,
       date: payload.date,
       habits_completed: payload.habitsCompleted,
-      sleep_ok: payload.sleepOk,
-      food_ok: payload.foodOk,
+      habit_ids_completed: payload.habitIdsCompleted,
       reflection_question: payload.reflectionQuestion,
       reflection_answer: payload.reflectionAnswer,
     },

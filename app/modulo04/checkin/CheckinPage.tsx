@@ -3,9 +3,14 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { selectReflectionQuestion } from "@/lib/modulo04/checkinContext";
+import {
+  HABIT_GROUP_LABEL,
+  HABIT_GROUP_ORDER,
+} from "@/lib/modulo04/habitPresets";
 import { upsertCheckinAction } from "../actions";
 import { useBossStore } from "@/store/bossStore";
 import { useDailyStore } from "@/store/dailyStore";
+import type { HabitGroupKey, UserHabit } from "@/types/modulo04";
 
 interface CheckinPageProps {
   todayDate: string;
@@ -14,6 +19,10 @@ interface CheckinPageProps {
   recentDays: string[];
   /** Fechas dentro del rango con check-in registrado en Supabase. */
   completedDates: string[];
+  /** Hábitos configurables del usuario (ya seedeados con presets si era la primera vez). */
+  userHabits: UserHabit[];
+  /** IDs de hábitos ya marcados en Supabase si el check-in ya estaba cerrado. */
+  initialHabitIdsCompleted: string[];
 }
 
 const DAYS_ES_SHORT = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
@@ -55,22 +64,51 @@ export default function CheckinPage({
   alreadyClosed,
   recentDays,
   completedDates,
+  userHabits,
+  initialHabitIdsCompleted,
 }: CheckinPageProps) {
   const {
     missions,
-    sleepOk,
-    setSleepOk,
-    foodOk,
-    setFoodOk,
     reflectionAnswer,
     setReflectionAnswer,
     checkinClosed,
     setCheckinClosed,
+    habitIdsCompleted,
+    setHabitIdsCompleted,
+    toggleHabitId,
   } = useDailyStore();
   const { activeBoss, streakDays, incrementStreak } = useBossStore();
 
   const completedMissions = missions.filter((m) => m.markedAt !== null);
   const completedCoreToday = completedMissions.some((m) => m.isCore);
+
+  // Hidratamos el store con lo que venga de Supabase (solo una vez).
+  useEffect(() => {
+    if (initialHabitIdsCompleted.length > 0) {
+      setHabitIdsCompleted(initialHabitIdsCompleted);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Agrupamos los hábitos por grupo para renderizar secciones.
+  const habitsByGroup = useMemo(() => {
+    const by: Record<HabitGroupKey, UserHabit[]> = {
+      fisicos: [],
+      espirituales: [],
+      mentales: [],
+    };
+    for (const h of userHabits) by[h.groupKey].push(h);
+    // Asegura orden por sortOrder dentro del grupo.
+    for (const k of HABIT_GROUP_ORDER) {
+      by[k].sort((a, b) => a.sortOrder - b.sortOrder);
+    }
+    return by;
+  }, [userHabits]);
+
+  const physicalHabitsCompleted = useMemo(() => {
+    const ids = new Set(habitIdsCompleted);
+    return habitsByGroup.fisicos.filter((h) => ids.has(h.id)).length;
+  }, [habitsByGroup.fisicos, habitIdsCompleted]);
 
   const reflectionQuestion = useMemo(
     () =>
@@ -79,7 +117,7 @@ export default function CheckinPage({
         missionsCompleted: completedMissions.length,
         totalMissions: missions.length,
         streakDays,
-        sleepOk,
+        physicalHabitsCompleted,
         completedCoreToday,
       }),
     [
@@ -87,7 +125,7 @@ export default function CheckinPage({
       completedMissions.length,
       missions.length,
       streakDays,
-      sleepOk,
+      physicalHabitsCompleted,
       completedCoreToday,
     ],
   );
@@ -110,8 +148,7 @@ export default function CheckinPage({
       const ok = await upsertCheckinAction({
         date: todayDate,
         habitsCompleted: completedMissions.map((m) => m.key),
-        sleepOk,
-        foodOk,
+        habitIdsCompleted,
         reflectionQuestion,
         reflectionAnswer: reflectionAnswer || null,
       });
@@ -222,21 +259,27 @@ export default function CheckinPage({
           </p>
         </Section>
 
-        {/* Sección: Cómo estuviste (toggles) */}
-        <Section title="CÓMO ESTUVISTE">
-          <ToggleRow
-            label="¿Dormiste bien?"
-            value={sleepOk}
-            onChange={setSleepOk}
-            disabled={readOnly}
-          />
-          <ToggleRow
-            label="¿Comiste bien?"
-            value={foodOk}
-            onChange={setFoodOk}
-            disabled={readOnly}
-          />
-        </Section>
+        {/* Secciones: Hábitos agrupados */}
+        {HABIT_GROUP_ORDER.map((groupKey) => {
+          const list = habitsByGroup[groupKey];
+          return (
+            <Section key={groupKey} title={HABIT_GROUP_LABEL[groupKey]}>
+              {list.length === 0 ? (
+                <EmptyRow text="No hay hábitos en este grupo todavía." />
+              ) : (
+                list.map((h) => (
+                  <ToggleRow
+                    key={h.id}
+                    label={h.label}
+                    value={habitIdsCompleted.includes(h.id)}
+                    onChange={() => toggleHabitId(h.id)}
+                    disabled={readOnly}
+                  />
+                ))
+              )}
+            </Section>
+          );
+        })}
 
         {/* Sección: Reflexión */}
         <Section title="REFLEXIÓN">
@@ -264,7 +307,11 @@ export default function CheckinPage({
                 <span className="font-bold text-[#22D3EE]">
                   {completedMissions.length}
                 </span>{" "}
-                de {missions.length} misiones.
+                de {missions.length} misiones y{" "}
+                <span className="font-bold text-[#22D3EE]">
+                  {habitIdsCompleted.length}
+                </span>{" "}
+                de {userHabits.length} hábitos.
               </p>
               <p className="mt-1 text-xs text-[rgba(240,237,232,0.5)]">
                 Mañana tienes otra oportunidad.

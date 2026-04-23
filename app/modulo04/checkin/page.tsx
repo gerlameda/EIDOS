@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getRecentCheckinDates, getTodayCheckin } from "@/lib/supabase/checkin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getUserHabits } from "@/lib/supabase/userHabits";
 import CheckinPage from "./CheckinPage";
 
 /** Suma `delta` días a una fecha en formato "YYYY-MM-DD" manteniéndola como string. */
@@ -34,9 +35,13 @@ export default async function CheckinRoute() {
     addDaysISO(todayDate, i - 6),
   );
 
-  const [existing, completedDates] = await Promise.all([
+  // Cargamos checkin, fechas completas y hábitos del usuario en paralelo.
+  // getUserHabits(..., { seedIfEmpty: true }) seedea los presets si es la
+  // primera vez que el usuario abre el check-in.
+  const [existing, completedDates, userHabits] = await Promise.all([
     getTodayCheckin(user.id, todayDate, supabase),
     getRecentCheckinDates(user.id, recentDays[0], recentDays[6], supabase),
+    getUserHabits(user.id, supabase, { seedIfEmpty: true }),
   ]);
 
   return (
@@ -45,6 +50,8 @@ export default async function CheckinRoute() {
       alreadyClosed={existing !== null}
       recentDays={recentDays}
       completedDates={Array.from(completedDates)}
+      userHabits={userHabits}
+      initialHabitIdsCompleted={existing?.habitIdsCompleted ?? []}
     />
   );
 }
