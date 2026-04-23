@@ -1,6 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
-import { HABIT_PRESETS } from "@/lib/modulo04/habitPresets";
 import type { HabitGroupKey, UserHabit } from "@/types/modulo04";
 
 function habitsClient(supabase?: SupabaseClient) {
@@ -24,13 +23,12 @@ function rowToUserHabit(row: Record<string, unknown>): UserHabit {
 
 /**
  * Devuelve los hábitos no archivados del usuario, ordenados por grupo y sort_order.
- * Si `seedIfEmpty` está activo y el usuario no tiene ningún hábito, inserta los
- * presets antes de devolverlos.
+ * No seedea nada: el usuario empieza con 0 y configura sus hábitos antes del primer
+ * check-in (ver flujo de setup en CheckinPage).
  */
 export async function getUserHabits(
   userId: string,
   supabase?: SupabaseClient,
-  opts: { seedIfEmpty?: boolean } = {},
 ): Promise<UserHabit[]> {
   const client = habitsClient(supabase);
 
@@ -48,43 +46,70 @@ export async function getUserHabits(
     return [];
   }
 
-  const rows = (data as Record<string, unknown>[]) ?? [];
-  if (rows.length === 0 && opts.seedIfEmpty) {
-    await ensureDefaultHabits(userId, client);
-    return getUserHabits(userId, client, { seedIfEmpty: false });
-  }
-
-  return rows.map(rowToUserHabit);
+  return ((data as Record<string, unknown>[]) ?? []).map(rowToUserHabit);
 }
 
 /**
- * Inserta los presets faltantes para el usuario. Es idempotente: usa el
- * índice único (user_id, preset_slug) y `ON CONFLICT DO NOTHING` implícito
- * vía `upsert({ignoreDuplicates:true})`.
+ * Inserta un hábito nuevo para el usuario. Si viene de un preset (presetSlug),
+ * respeta el índice único (user_id, preset_slug) — un segundo intento es no-op.
+ * Devuelve el hábito insertado o null si hubo error/duplicado.
  */
-export async function ensureDefaultHabits(
+export async function addUserHabit(
   userId: string,
+  payload: {
+    groupKey: HabitGroupKey;
+    label: string;
+    presetSlug?: string | null;
+    sortOrder?: number;
+  },
   supabase?: SupabaseClient,
-): Promise<void> {
+): Promise<UserHabit | null> {
   const client = habitsClient(supabase);
 
-  const rows = HABIT_PRESETS.map((p) => ({
-    user_id: userId,
-    group_key: p.groupKey,
-    label: p.label,
-    preset_slug: p.slug,
-    is_preset: true,
-    sort_order: p.sortOrder,
-    archived: false,
-  }));
+  const { data, error } = await client
+    .from("eidos_user_habits")
+    .insert({
+      user_id: userId,
+      group_key: payload.groupKey,
+      label: payload.label,
+      preset_slug: payload.presetSlug ?? null,
+      is_preset: !!payload.presetSlug,
+      sort_order: payload.sortOrder ?? 100,
+      archived: false,
+    })
+    .select("*")
+    .single();
 
-  const { error } = await client.from("eidos_user_habits").upsert(rows, {
-    onConflict: "user_id,preset_slug",
-    ignoreDuplicates: true,
-  });
+  if (error || !data) {
+    // eslint-disable-next-line no-console
+    console.error("addUserHabit error:", error);
+    return null;
+  }
+
+  return rowToUserHabit(data as Record<string, unknown>);
+}
+
+/**
+ * Marca un hábito como archivado (no lo borra para preservar el histórico
+ * de habit_ids_completed en check-ins pasados).
+ */
+export async function archiveUserHabit(
+  userId: string,
+  habitId: string,
+  supabase?: SupabaseClient,
+): Promise<boolean> {
+  const client = habitsClient(supabase);
+
+  const { error } = await client
+    .from("eidos_user_habits")
+    .update({ archived: true })
+    .eq("id", habitId)
+    .eq("user_id", userId);
 
   if (error) {
     // eslint-disable-next-line no-console
-    console.error("ensureDefaultHabits error:", error);
+    console.error("archiveUserHabit error:", error);
+    return false;
   }
+  return true;
 }

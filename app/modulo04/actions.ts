@@ -1,8 +1,14 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import {
+  addUserHabit,
+  archiveUserHabit,
+} from "@/lib/supabase/userHabits";
 import type { Boss } from "@/types/boss";
+import type { HabitGroupKey, UserHabit } from "@/types/modulo04";
 
 export async function createBossAction(
   proposal: Omit<Boss, "id" | "userId" | "createdAt" | "updatedAt">,
@@ -91,6 +97,45 @@ export async function upsertCheckinAction(payload: {
     return false;
   }
   return true;
+}
+
+export async function addUserHabitAction(payload: {
+  groupKey: HabitGroupKey;
+  label: string;
+  presetSlug?: string | null;
+}): Promise<UserHabit | null> {
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const label = payload.label.trim();
+  if (!label) return null;
+
+  const habit = await addUserHabit(
+    user.id,
+    {
+      groupKey: payload.groupKey,
+      label,
+      presetSlug: payload.presetSlug ?? null,
+    },
+    supabase,
+  );
+  if (habit) revalidatePath("/modulo04/checkin");
+  return habit;
+}
+
+export async function archiveUserHabitAction(habitId: string): Promise<boolean> {
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const ok = await archiveUserHabit(user.id, habitId, supabase);
+  if (ok) revalidatePath("/modulo04/checkin");
+  return ok;
 }
 
 export async function saveJournalAction(payload: {

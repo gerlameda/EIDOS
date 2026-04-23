@@ -36,12 +36,12 @@ export default async function CheckinRoute() {
   );
 
   // Cargamos checkin, fechas completas y hábitos del usuario en paralelo.
-  // getUserHabits(..., { seedIfEmpty: true }) seedea los presets si es la
-  // primera vez que el usuario abre el check-in.
+  // No seedeamos nada: si el usuario no tiene hábitos, CheckinPage muestra
+  // el flujo de setup antes de dejarlo cerrar su día.
   const [existing, completedDates, userHabits] = await Promise.all([
     getTodayCheckin(user.id, todayDate, supabase),
     getRecentCheckinDates(user.id, recentDays[0], recentDays[6], supabase),
-    getUserHabits(user.id, supabase, { seedIfEmpty: true }),
+    getUserHabits(user.id, supabase),
   ]);
 
   return (
