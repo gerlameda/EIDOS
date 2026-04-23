@@ -6,17 +6,19 @@ import { createClient } from "@/lib/supabase/client";
 import { syncProfileToSupabase } from "@/lib/onboarding/sync-profile";
 import { useOnboardingStore } from "@/store/onboardingStore";
 
+type AuthMode = "signup" | "login";
+
 const inputBaseStyle: CSSProperties = {
   backgroundColor: "#1A1A26",
   border: "1px solid #2A2A3A",
   color: "#F0EDE8",
 };
 
-const labelClass =
-  "mb-2 block text-xs text-[rgba(240,237,232,0.6)]";
+const labelClass = "mb-2 block text-xs text-[rgba(240,237,232,0.6)]";
 
 export function Step3Auth() {
   const { setHandlers } = useOnboardingNavRegistration();
+  const [mode, setMode] = useState<AuthMode>("signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -29,7 +31,12 @@ export function Step3Auth() {
     return () => setHandlers(null);
   }, [setHandlers]);
 
-  const handleCrearCuenta = useCallback(
+  const switchMode = useCallback(() => {
+    setMode((m) => (m === "signup" ? "login" : "signup"));
+    setError(null);
+  }, []);
+
+  const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
       setError(null);
@@ -45,67 +52,92 @@ export function Step3Auth() {
       setLoading(true);
       try {
         const supabase = createClient();
-        const { data, error: signUpError } = await supabase.auth.signUp({
-          email: trimmed,
-          password,
-        });
 
-        console.log("[EIDOS] signUp data:", data);
-        console.log("[EIDOS] signUp error:", signUpError);
+        if (mode === "signup") {
+          const { data, error: signUpError } = await supabase.auth.signUp({
+            email: trimmed,
+            password,
+          });
 
-        if (signUpError) {
-          setError(signUpError.message);
+          console.log("[EIDOS] signUp data:", data);
+          console.log("[EIDOS] signUp error:", signUpError);
+
+          if (signUpError) {
+            setError(signUpError.message);
+            setLoading(false);
+            return;
+          }
+
+          if (!data.session) {
+            console.warn(
+              "[EIDOS] signUp devolvió user sin session — revisa 'Confirm email' en Supabase",
+            );
+            setError(
+              "Cuenta creada pero sin sesión. Revisa la configuración de Supabase (Confirm email debe estar OFF).",
+            );
+            setLoading(false);
+            return;
+          }
+
+          // Persistimos el estado actual del onboarding ANTES del full-reload.
+          await syncProfileToSupabase(useOnboardingStore.getState());
+          window.location.href = "/onboarding/4";
+          return;
+        }
+
+        // mode === "login"
+        const { data, error: signInError } =
+          await supabase.auth.signInWithPassword({
+            email: trimmed,
+            password,
+          });
+
+        console.log("[EIDOS] signIn data:", data);
+        console.log("[EIDOS] signIn error:", signInError);
+
+        if (signInError) {
+          setError(signInError.message);
           setLoading(false);
           return;
         }
 
         if (!data.session) {
-          // Supabase creó el usuario pero no emitió sesión. En 99% de los casos
-          // es porque "Confirm email" está ON en el dashboard.
-          console.warn(
-            "[EIDOS] signUp devolvió user sin session — revisa 'Confirm email' en Supabase",
-          );
-          setError(
-            "Cuenta creada pero sin sesión. Revisa la configuración de Supabase (Confirm email debe estar OFF).",
-          );
+          setError("No se pudo iniciar sesión. Intenta de nuevo.");
           setLoading(false);
           return;
         }
 
-        // Sesión activa inmediata. Persistimos el estado actual del onboarding
-        // ANTES de redirigir para no perder datos en el full-reload.
-        await syncProfileToSupabase(useOnboardingStore.getState());
-
-        // window.location.href fuerza un full reload, lo cual garantiza que los
-        // RSC/middleware vean las cookies de sesión recién escritas por
-        // @supabase/ssr en la siguiente request.
-        window.location.href = "/onboarding/4";
+        // Full reload para que el middleware y los RSC recojan la cookie de sesión.
+        // El hook useSupabaseSync hidratará el store desde Supabase al recargar.
+        window.location.href = "/campo-base";
       } catch (err) {
-        console.error("[EIDOS] signUp threw:", err);
+        console.error(`[EIDOS] ${mode} threw:`, err);
         setError("Error inesperado. Intenta de nuevo.");
         setLoading(false);
       }
     },
-    [email, password],
+    [email, password, mode],
   );
 
   const canSubmit =
     email.trim().length > 0 && password.length >= 6 && !loading;
 
+  const isSignup = mode === "signup";
+  const title = isSignup ? "Empieza tu juego." : "Continúa tu camino.";
+  const subtitle = isSignup
+    ? "Crea tu cuenta para guardar tu progreso."
+    : "Inicia sesión para seguir donde te quedaste.";
+  const submitLabel = isSignup ? "Crear cuenta →" : "Entrar →";
+  const toggleText = isSignup ? "¿Ya tienes cuenta?" : "¿Eres nuevo?";
+  const toggleCta = isSignup ? "Inicia sesión" : "Crea tu cuenta";
+
   return (
     <div className="flex flex-1 flex-col justify-center">
       <div className="mx-auto w-full max-w-md text-center md:text-left">
-        <h1 className="text-2xl font-semibold text-text-primary">
-          Empieza tu juego.
-        </h1>
-        <p className="mt-6 text-sm text-text-muted">
-          Crea tu cuenta para guardar tu progreso.
-        </p>
+        <h1 className="text-2xl font-semibold text-text-primary">{title}</h1>
+        <p className="mt-6 text-sm text-text-muted">{subtitle}</p>
 
-        <form
-          onSubmit={(e) => void handleCrearCuenta(e)}
-          className="mt-8 space-y-4"
-        >
+        <form onSubmit={(e) => void handleSubmit(e)} className="mt-8 space-y-4">
           <div>
             <label className={labelClass} htmlFor="step3-email">
               Correo
@@ -132,7 +164,7 @@ export function Step3Auth() {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
-              autoComplete="new-password"
+              autoComplete={isSignup ? "new-password" : "current-password"}
               className="w-full rounded-lg px-4 py-3 text-sm outline-none"
               style={inputBaseStyle}
             />
@@ -150,9 +182,22 @@ export function Step3Auth() {
             className="w-full rounded-lg py-3 font-medium transition-opacity disabled:opacity-40"
             style={{ backgroundColor: "#22D3EE", color: "#0D0D14" }}
           >
-            {loading ? "Cargando…" : "Crear cuenta →"}
+            {loading ? "Cargando…" : submitLabel}
           </button>
         </form>
+
+        <p className="mt-6 text-center text-xs text-text-muted md:text-left">
+          {toggleText}{" "}
+          <button
+            type="button"
+            onClick={switchMode}
+            disabled={loading}
+            className="font-medium underline underline-offset-2 transition-opacity disabled:opacity-40"
+            style={{ color: "#22D3EE" }}
+          >
+            {toggleCta}
+          </button>
+        </p>
       </div>
     </div>
   );
