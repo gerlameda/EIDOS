@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
+import { XPBar } from "@/components/avatar/XPBar";
 import { buildDailyMissions } from "@/lib/modulo04/missions";
 import { registerAttack, saveBossHp } from "@/lib/supabase/boss";
 import { useBossStore } from "@/store/bossStore";
 import { useDailyStore } from "@/store/dailyStore";
+import { useEffectsStore } from "@/store/effectsStore";
 import type { Boss } from "@/types/boss";
 import type { DailyMission } from "@/types/modulo04";
 import type { RutinaBase, SprintCommitment } from "@/types/modulo03";
@@ -27,6 +29,15 @@ export default function CampoBase({
 }: CampoBaseProps) {
   const { activeBoss, setActiveBoss, applyDamage } = useBossStore();
   const { missions, setMissions, markMission, checkinClosed } = useDailyStore();
+  const triggerAttack = useEffectsStore((s) => s.triggerAttack);
+  const floatingDamages = useEffectsStore((s) => s.floatingDamages);
+  const dismissDamage = useEffectsStore((s) => s.dismissDamage);
+  const attackTick = useEffectsStore((s) => s.attackTick);
+
+  // attackTick !== 0 => ya hubo al menos un ataque en esta sesión.
+  // Usamos key-based remount en los elementos animados para disparar
+  // los CSS keyframes en cada cambio de tick (React 19 friendly).
+  const hasAttacked = attackTick > 0;
 
   // Inicializar boss y misiones
   useEffect(() => {
@@ -65,6 +76,7 @@ export default function CampoBase({
     const now = new Date().toISOString();
     markMission(mission.key, now);
     applyDamage(mission.damageAmount);
+    triggerAttack(mission.damageAmount, mission.isCore);
 
     if (currentBoss) {
       await registerAttack(
@@ -88,24 +100,61 @@ export default function CampoBase({
   return (
     <div className="px-5 py-6 text-[#F0EDE8]">
       <div className="mx-auto w-full max-w-lg space-y-6">
-        {/* Boss card */}
+        {/* XP del jugador — sube con cada ataque */}
+        <XPBar />
+
+        {/* Boss card (con screen shake en cada ataque) */}
         {currentBoss ? (
-          <section className="space-y-3 rounded-xl border border-[#2A2A3A] bg-[#1A1A26] p-5">
+          <section
+            key={`boss-shake-${attackTick}`}
+            className={`relative space-y-3 overflow-visible rounded-xl border border-[#2A2A3A] bg-[#1A1A26] p-5 ${hasAttacked ? "animate-screen-shake" : ""}`}
+          >
+            {/* Damage floats — absolute sobre la card */}
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-0">
+              {floatingDamages.map((d) => (
+                <span
+                  key={d.id}
+                  onAnimationEnd={() => dismissDamage(d.id)}
+                  className={`animate-damage-float absolute left-1/2 top-2 font-mono text-2xl font-bold drop-shadow-[0_0_8px_rgba(34,211,238,0.55)] ${
+                    d.isCore ? "text-[#C9A84C]" : "text-[#22D3EE]"
+                  }`}
+                >
+                  −{d.amount}
+                  {d.isCore && (
+                    <span className="ml-1 text-[10px] tracking-widest">
+                      CORE
+                    </span>
+                  )}
+                </span>
+              ))}
+            </div>
+
             {taunt && (
               <p className="text-xs italic text-[rgba(240,237,232,0.5)]">
                 {`"${taunt}"`}
               </p>
             )}
             <h2 className="text-lg font-bold uppercase tracking-wider text-[#F0EDE8]">
-              {currentBoss.name}
+              <span
+                key={`flinch-${attackTick}`}
+                className={hasAttacked ? "animate-boss-flinch" : ""}
+              >
+                {currentBoss.name}
+              </span>
             </h2>
             {/* HP bar */}
             <div className="space-y-1">
-              <div className="h-2 w-full rounded-full bg-[#2A2A3A]">
+              <div className="relative h-2 w-full overflow-hidden rounded-full bg-[#2A2A3A]">
                 <div
                   className="h-2 rounded-full bg-[#22D3EE] transition-all duration-500"
                   style={{ width: `${hpPercent}%` }}
                 />
+                {hasAttacked && (
+                  <div
+                    key={`flash-${attackTick}`}
+                    className="animate-hp-flash pointer-events-none absolute inset-0 rounded-full bg-white"
+                  />
+                )}
               </div>
               <p className="text-xs text-[rgba(240,237,232,0.5)]">
                 {currentBoss.currentHp} HP · Deadline: {currentBoss.deadline}

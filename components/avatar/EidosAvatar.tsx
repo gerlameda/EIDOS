@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useMemo } from "react";
+import { useEffectsStore } from "@/store/effectsStore";
 import type { Capa1AvatarTier } from "@/lib/modulo01/capa1-flow-data";
 
 type AvatarCfg = {
@@ -50,12 +51,27 @@ const AVATAR_TIER: Record<Capa1AvatarTier, AvatarCfg> = {
 export type EidosAvatarProps = {
   tier: Capa1AvatarTier;
   className?: string;
+  /** Anima fade-in desde la oscuridad en el primer mount. */
+  emerge?: boolean;
+  /** Si true, reacciona a orbBurstTick del effectsStore con un burst de brillo. */
+  reactive?: boolean;
 };
 
 /** Orbe energético SVG (Módulo 01 Capa 1 / dashboard). */
-export function EidosAvatar({ tier, className }: EidosAvatarProps) {
+export function EidosAvatar({
+  tier,
+  className,
+  emerge = false,
+  reactive = false,
+}: EidosAvatarProps) {
   const uid = useId().replace(/:/g, "");
   const cfg = AVATAR_TIER[tier];
+  const orbBurstTick = useEffectsStore((s) => s.orbBurstTick);
+
+  // Burst activo cuando: reactive y hay un tick válido.
+  // El key-based remount abajo se encarga de replay en cada cambio.
+  const bursting = reactive && orbBurstTick > 0;
+
   const particles = useMemo(() => {
     const n = cfg.particleCount;
     const out: { cx: number; cy: number; r: number; delay: string }[] = [];
@@ -76,10 +92,23 @@ export function EidosAvatar({ tier, className }: EidosAvatarProps) {
     tier === "high" ? cfg.gold : tier === "mid" ? cfg.accent : cfg.accent;
   const pFillAlt = tier === "low" ? cfg.core : cfg.gold;
 
+  const baseClass =
+    className ?? "mx-auto h-72 w-56 shrink-0 md:h-80 md:w-64";
+  const animClass = [
+    emerge ? "animate-avatar-emerge" : "",
+    bursting ? "animate-orb-burst" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const combinedClass = animClass
+    ? `${baseClass} ${animClass}`
+    : baseClass;
+
   return (
     <svg
+      key={bursting ? `burst-${orbBurstTick}` : "static"}
       viewBox="0 0 200 280"
-      className={className ?? "mx-auto h-72 w-56 shrink-0 md:h-80 md:w-64"}
+      className={combinedClass}
       aria-hidden
     >
       <defs>

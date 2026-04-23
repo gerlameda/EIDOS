@@ -33,6 +33,127 @@
   }
 }
 
+/* ========================================================================
+   GAME JUICE — combat feedback, avatar emerge, XP, orb burst
+   ======================================================================== */
+
+/* Screen shake leve al atacar. 0.32s total. */
+@keyframes eidos-screen-shake {
+  0% { transform: translate(0, 0); }
+  15% { transform: translate(-4px, 2px); }
+  30% { transform: translate(3px, -3px); }
+  45% { transform: translate(-3px, -2px); }
+  60% { transform: translate(4px, 1px); }
+  75% { transform: translate(-2px, 3px); }
+  100% { transform: translate(0, 0); }
+}
+
+/* Flash cyan por encima del HP bar al recibir daño. */
+@keyframes eidos-hp-flash {
+  0% { opacity: 0; }
+  20% { opacity: 0.95; }
+  100% { opacity: 0; }
+}
+
+/* Boss name wobble corto (flinch). */
+@keyframes eidos-boss-flinch {
+  0% { transform: translateX(0) skewX(0); }
+  20% { transform: translateX(-3px) skewX(-2deg); }
+  45% { transform: translateX(3px) skewX(1.5deg); }
+  70% { transform: translateX(-2px) skewX(-0.8deg); }
+  100% { transform: translateX(0) skewX(0); }
+}
+
+/* Número de daño flotando hacia arriba y desvaneciéndose. */
+@keyframes eidos-damage-float {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.85);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, -10px) scale(1.15);
+  }
+  35% {
+    opacity: 1;
+    transform: translate(-50%, -22px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -72px) scale(0.9);
+  }
+}
+
+/* Avatar fade-in desde la oscuridad al primer mount. */
+@keyframes eidos-avatar-emerge {
+  0% {
+    opacity: 0;
+    filter: brightness(0.15) blur(8px);
+    transform: scale(0.94);
+  }
+  60% {
+    opacity: 1;
+    filter: brightness(1.15) blur(0);
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    filter: brightness(1) blur(0);
+    transform: scale(1);
+  }
+}
+
+/* Orbe que "explota" en brillo por 1.6s después de una acción. */
+@keyframes eidos-orb-burst {
+  0% { filter: brightness(1) saturate(1); }
+  20% { filter: brightness(1.9) saturate(1.35); }
+  55% { filter: brightness(1.35) saturate(1.2); }
+  100% { filter: brightness(1) saturate(1); }
+}
+
+/* XP bar: fill animado + shimmer cuando gana XP. */
+@keyframes eidos-xp-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Utility classes */
+.animate-screen-shake {
+  animation: eidos-screen-shake 0.32s ease-in-out;
+}
+
+.animate-hp-flash {
+  animation: eidos-hp-flash 0.45s ease-out;
+}
+
+.animate-boss-flinch {
+  animation: eidos-boss-flinch 0.32s ease-in-out;
+  display: inline-block;
+}
+
+.animate-damage-float {
+  animation: eidos-damage-float 1.5s ease-out forwards;
+}
+
+.animate-avatar-emerge {
+  animation: eidos-avatar-emerge 1.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-orb-burst {
+  animation: eidos-orb-burst 1.6s ease-out;
+}
+
+.animate-xp-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.35) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: eidos-xp-shimmer 1.4s ease-in-out;
+}
+
 :root {
   --background: #0d0d14;
   --foreground: #f0ede8;

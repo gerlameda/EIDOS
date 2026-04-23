@@ -4,9 +4,22 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Boss } from "@/types/boss";
 
+/** XP necesario por cada nivel. Constante simple para v1 del juego-feel. */
+export const XP_PER_LEVEL = 100;
+
+export function levelFromXp(xp: number): number {
+  return Math.floor(xp / XP_PER_LEVEL) + 1;
+}
+
+export function xpProgressPercent(xp: number): number {
+  return ((xp % XP_PER_LEVEL) / XP_PER_LEVEL) * 100;
+}
+
 interface BossState {
   activeBoss: Boss | null;
   streakDays: number;
+  /** XP acumulado de por vida. Sube con cada damage aplicado. */
+  totalXp: number;
   setActiveBoss: (boss: Boss | null) => void;
   applyDamage: (damage: number) => void;
   incrementStreak: () => void;
@@ -19,10 +32,12 @@ export const useBossStore = create<BossState>()(
     (set) => ({
       activeBoss: null,
       streakDays: 0,
+      totalXp: 0,
       setActiveBoss: (boss) => set({ activeBoss: boss }),
       applyDamage: (damage) =>
         set((state) => {
-          if (!state.activeBoss) return state;
+          const nextXp = state.totalXp + damage;
+          if (!state.activeBoss) return { totalXp: nextXp };
           const newHp = Math.max(0, state.activeBoss.currentHp - damage);
           const phase =
             newHp <= 0
@@ -31,6 +46,7 @@ export const useBossStore = create<BossState>()(
                 ? "herido"
                 : "intimidando";
           return {
+            totalXp: nextXp,
             activeBoss: {
               ...state.activeBoss,
               currentHp: newHp,
@@ -42,7 +58,7 @@ export const useBossStore = create<BossState>()(
       incrementStreak: () =>
         set((state) => ({ streakDays: state.streakDays + 1 })),
       resetStreak: () => set({ streakDays: 0 }),
-      clearBoss: () => set({ activeBoss: null, streakDays: 0 }),
+      clearBoss: () => set({ activeBoss: null, streakDays: 0, totalXp: 0 }),
     }),
     {
       name: "eidos-boss",

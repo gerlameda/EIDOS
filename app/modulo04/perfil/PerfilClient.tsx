@@ -1,6 +1,7 @@
 "use client";
 
 import { EidosAvatar } from "@/components/avatar/EidosAvatar";
+import { XPBar } from "@/components/avatar/XPBar";
 import { useBossStore } from "@/store/bossStore";
 import type { Capa1AvatarTier } from "@/lib/modulo01/capa1-flow-data";
 import type { Boss } from "@/types/boss";
@@ -29,12 +30,18 @@ export default function PerfilClient({
       <div className="mx-auto w-full max-w-lg space-y-8">
         {/* Avatar + identidad */}
         <section className="flex flex-col items-center gap-4 pt-4">
-          <EidosAvatar tier={tier} className="h-[120px] w-[86px]" />
+          <EidosAvatar
+            tier={tier}
+            emerge
+            reactive
+            className="h-[120px] w-[86px]"
+          />
           <div className="text-center">
             <h1 className="text-2xl font-bold text-[#F0EDE8]">{nombre}</h1>
             <p className="text-sm text-[#C9A84C]">{nivelLabel}</p>
             <p className="text-xs text-[rgba(240,237,232,0.4)]">Nivel {nivel}</p>
           </div>
+          <XPBar className="w-full max-w-xs" />
           {streakDays > 0 && (
             <div className="rounded-full border border-[#2A2A3A] bg-[#1A1A26] px-4 py-1">
               <p className="text-xs font-bold text-[#C9A84C]">
