@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
   HABIT_GROUP_LABEL,
@@ -86,6 +87,8 @@ export default function CheckinPage({
   userHabits: initialUserHabits,
   initialHabitIdsCompleted,
 }: CheckinPageProps) {
+  const router = useRouter();
+
   // Lista local de hábitos: inicia con lo que vino del server y se actualiza
   // en vivo al agregar/archivar durante setup/edit (sin esperar al revalidate).
   const [habits, setHabits] = useState<UserHabit[]>(initialUserHabits);
@@ -147,12 +150,18 @@ export default function CheckinPage({
   }, []);
 
   const [saving, setSaving] = useState(false);
+  // Cuando el usuario ya cerró el día pero quiere corregir algo, oprime
+  // "Editar respuestas" → reabrimos los toggles sin borrar lo que haya en
+  // Supabase (el siguiente save hace upsert y actualiza los valores).
+  const [reopenedForEdit, setReopenedForEdit] = useState(false);
   const completedSet = useMemo(
     () => new Set(completedDates),
     [completedDates],
   );
-  // Hoy también cuenta como "completo" si ya cerraste.
-  const isTodayDone = alreadyClosed || checkinClosed;
+  // Hoy también cuenta como "completo" si ya cerraste — pero si pulsaron
+  // "Editar respuestas", dejamos de tratarlo como readOnly.
+  const isTodayDone =
+    (alreadyClosed || checkinClosed) && !reopenedForEdit;
 
   useEffect(() => {
     if (alreadyClosed) setCheckinClosed(true);
@@ -172,8 +181,16 @@ export default function CheckinPage({
         reflectionAnswer: null,
       });
       if (!ok) return;
-      incrementStreak();
+      // Solo incrementamos la racha la primera vez que se cierra el día;
+      // si re-guardas desde "Editar respuestas" ya no cuenta doble.
+      if (!(alreadyClosed || checkinClosed)) {
+        incrementStreak();
+      }
       setCheckinClosed(true);
+      setReopenedForEdit(false);
+      // Al cerrar el día te mandamos directo al journal — ahí es donde
+      // vive la reflexión.
+      router.push("/modulo04/journal");
     } finally {
       setSaving(false);
     }
@@ -425,6 +442,13 @@ export default function CheckinPage({
             >
               Escribir en el journal →
             </Link>
+            <button
+              type="button"
+              onClick={() => setReopenedForEdit(true)}
+              className="mt-3 block w-full rounded-xl border border-[#2A2A3A] bg-transparent py-3 text-center text-sm font-semibold text-[#F0EDE8] transition-colors hover:bg-[#1A1A26]"
+            >
+              ✎ Editar respuestas
+            </button>
             <Link
               href="/modulo04"
               className="mt-3 block text-center text-xs text-[rgba(240,237,232,0.5)] underline"
@@ -443,9 +467,13 @@ export default function CheckinPage({
               type="button"
               onClick={() => void handleFinish()}
               disabled={saving}
-              className="w-full rounded-xl bg-[#F0EDE8] py-3 text-sm font-bold tracking-[0.14em] text-[#0D0D14] transition-opacity disabled:opacity-50"
+              className="w-full rounded-xl bg-[#22D3EE] py-3 text-sm font-bold tracking-[0.14em] text-[#0D0D14] transition-opacity disabled:opacity-50"
             >
-              {saving ? "GUARDANDO..." : "CERRAR MI DÍA"}
+              {saving
+                ? "GUARDANDO..."
+                : reopenedForEdit
+                  ? "GUARDAR CAMBIOS →"
+                  : "CERRAR MI DÍA Y ESCRIBIR →"}
             </button>
           </div>
         </div>
