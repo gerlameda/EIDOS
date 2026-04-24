@@ -318,6 +318,9 @@ export default function Modulo01Capa1Page() {
               fillColor={rangeColor}
             />
           </div>
+          <p className="text-center text-xs text-[rgba(240,237,232,0.4)]">
+            ← Desliza la barra para ajustar →
+          </p>
           <div className="flex justify-between gap-4 text-xs leading-snug text-text-muted">
             <span className="max-w-[45%] text-left">
               {currentDef.poloIzquierda}

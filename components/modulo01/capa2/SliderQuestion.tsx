@@ -46,7 +46,10 @@ export function SliderQuestion({
       <p className="mt-6 text-center text-lg font-medium tabular-nums text-[#F0EDE8]">
         {v}%
       </p>
-      <div className="mt-4">
+      <p className="mt-1 text-center text-xs text-[rgba(240,237,232,0.4)]">
+        ← Desliza la barra para ajustar →
+      </p>
+      <div className="mt-3">
         <input
           id={`capa2-range-${uid}`}
           type="range"
