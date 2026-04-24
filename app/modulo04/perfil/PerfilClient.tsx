@@ -5,6 +5,7 @@ import { XPBar } from "@/components/avatar/XPBar";
 import { useBossStore } from "@/store/bossStore";
 import type { Capa1AvatarTier } from "@/lib/modulo01/capa1-flow-data";
 import type { Boss } from "@/types/boss";
+import AdminPanel from "./AdminPanel";
 
 interface PerfilClientProps {
   nombre: string;
@@ -64,6 +65,9 @@ export default function PerfilClient({
             </div>
           </section>
         )}
+
+        {/* Panel admin */}
+        <AdminPanel />
 
         {/* Boss activo */}
         {boss && (

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getUpcomingAgendaEvents } from "@/lib/supabase/agenda";
 import { getUnifiedAreaScores } from "@/lib/modulo01/area-scores";
 import { generateBossProposal } from "@/lib/modulo04/bossGenerator";
 import { getAttacksToday, loadActiveBoss } from "@/lib/supabase/boss";
@@ -34,10 +35,11 @@ export default async function Modulo04Page() {
     timeZone: timezone,
   }).format(new Date());
 
-  const [boss, attacksToday, userHabits] = await Promise.all([
+  const [boss, attacksToday, userHabits, upcomingEvents] = await Promise.all([
     loadActiveBoss(user.id, supabase),
     getAttacksToday(user.id, todayDate, supabase),
     getUserHabits(user.id, supabase),
+    getUpcomingAgendaEvents(user.id, todayDate, 3, supabase),
   ]);
 
   if (boss) {
@@ -65,6 +67,7 @@ export default async function Modulo04Page() {
         sprintCommitments={sprintCommitments}
         capa2Areas={capa2Areas}
         userHabits={userHabits}
+        upcomingEvents={upcomingEvents}
       />
     );
   }

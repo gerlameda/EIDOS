@@ -20,6 +20,7 @@ import type {
 } from "@/types/modulo04";
 import type { RutinaBase, SprintCommitment } from "@/types/modulo03";
 import type { Capa2AreaStatus } from "@/lib/modulo01/capa2-types";
+import type { AgendaEvent } from "@/types/agenda";
 
 interface CampoBaseProps {
   userId: string;
@@ -29,6 +30,7 @@ interface CampoBaseProps {
   sprintCommitments: SprintCommitment[];
   capa2Areas?: Capa2AreaStatus[];
   userHabits?: UserHabit[];
+  upcomingEvents?: AgendaEvent[];
 }
 
 export default function CampoBase({
@@ -39,6 +41,7 @@ export default function CampoBase({
   sprintCommitments,
   capa2Areas = [],
   userHabits = [],
+  upcomingEvents = [],
 }: CampoBaseProps) {
   const { activeBoss, setActiveBoss, applyDamage } = useBossStore();
   const { missions, setMissions, markMission, checkinClosed } = useDailyStore();
@@ -310,6 +313,57 @@ export default function CampoBase({
             </p>
           </section>
         )}
+
+        {/* Próximos eventos de agenda */}
+        <section className="space-y-3 rounded-xl border border-[#2A2A3A] bg-[#1A1A26] p-5">
+          <div className="flex items-baseline justify-between gap-3">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-[#22D3EE]">
+              Agenda
+            </h3>
+            <Link
+              href="/modulo04/agenda"
+              className="text-[11px] font-medium text-[rgba(240,237,232,0.55)] underline hover:text-[#F0EDE8]"
+            >
+              Ver todo
+            </Link>
+          </div>
+          {upcomingEvents.length === 0 ? (
+            <Link
+              href="/modulo04/agenda"
+              className="block rounded-lg border border-dashed border-[#2A2A3A] bg-[#0D0D14] px-3 py-3 text-center text-xs text-[rgba(240,237,232,0.5)] hover:border-[#22D3EE]/60"
+            >
+              + Agrega un evento
+            </Link>
+          ) : (
+            <ul className="space-y-1.5">
+              {upcomingEvents.map((ev) => {
+                const parts = ev.startDate.split("-");
+                const dd = parts[2];
+                const mm = parts[1];
+                return (
+                  <li key={ev.id}>
+                    <Link
+                      href="/modulo04/agenda"
+                      className="flex items-baseline gap-3 rounded-lg border border-[rgba(240,237,232,0.08)] bg-[#0D0D14] px-3 py-2 hover:border-[#22D3EE]/40"
+                    >
+                      <span className="shrink-0 text-xs tabular-nums text-[rgba(240,237,232,0.55)]">
+                        {dd}/{mm}
+                        {ev.startTime ? (
+                          <span className="ml-1 text-[#22D3EE]">
+                            {ev.startTime}
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="truncate text-sm text-[#F0EDE8]">
+                        {ev.title}
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
 
         {/* CTA check-in nocturno */}
         {!checkinClosed && (
