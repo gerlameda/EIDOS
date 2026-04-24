@@ -320,20 +320,14 @@ export default function CampoBase({
             <h3 className="text-xs font-bold uppercase tracking-widest text-[#22D3EE]">
               Agenda
             </h3>
-            <Link
-              href="/modulo04/agenda"
-              className="text-[11px] font-medium text-[rgba(240,237,232,0.55)] underline hover:text-[#F0EDE8]"
-            >
-              Ver todo
-            </Link>
+            <span className="text-[11px] text-[rgba(240,237,232,0.45)]">
+              Próximos eventos
+            </span>
           </div>
           {upcomingEvents.length === 0 ? (
-            <Link
-              href="/modulo04/agenda"
-              className="block rounded-lg border border-dashed border-[#2A2A3A] bg-[#0D0D14] px-3 py-3 text-center text-xs text-[rgba(240,237,232,0.5)] hover:border-[#22D3EE]/60"
-            >
-              + Agrega un evento
-            </Link>
+            <p className="rounded-lg border border-dashed border-[#2A2A3A] bg-[#0D0D14] px-3 py-3 text-center text-xs text-[rgba(240,237,232,0.5)]">
+              Aún no tienes eventos programados
+            </p>
           ) : (
             <ul className="space-y-1.5">
               {upcomingEvents.map((ev) => {
@@ -363,6 +357,12 @@ export default function CampoBase({
               })}
             </ul>
           )}
+          <Link
+            href="/modulo04/agenda"
+            className="mt-1 block w-full rounded-xl border border-[#22D3EE]/60 bg-[#22D3EE]/10 py-2.5 text-center text-sm font-bold text-[#22D3EE] transition hover:bg-[#22D3EE]/20"
+          >
+            📅 Abrir calendario →
+          </Link>
         </section>
 
         {/* CTA check-in nocturno */}
