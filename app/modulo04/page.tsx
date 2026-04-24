@@ -3,6 +3,7 @@ import { getUnifiedAreaScores } from "@/lib/modulo01/area-scores";
 import { generateBossProposal } from "@/lib/modulo04/bossGenerator";
 import { getAttacksToday, loadActiveBoss } from "@/lib/supabase/boss";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getUserHabits } from "@/lib/supabase/userHabits";
 import type { RutinaBase, SprintCommitment } from "@/types/modulo03";
 import type { Capa2AreaStatus } from "@/lib/modulo01/capa2-types";
 import type { Capa1AreaAnswer } from "@/lib/modulo01/capa1-flow-data";
@@ -33,9 +34,10 @@ export default async function Modulo04Page() {
     timeZone: timezone,
   }).format(new Date());
 
-  const [boss, attacksToday] = await Promise.all([
+  const [boss, attacksToday, userHabits] = await Promise.all([
     loadActiveBoss(user.id, supabase),
     getAttacksToday(user.id, todayDate, supabase),
+    getUserHabits(user.id, supabase),
   ]);
 
   if (boss) {
@@ -62,6 +64,7 @@ export default async function Modulo04Page() {
         rutinaBase={rutinaBase}
         sprintCommitments={sprintCommitments}
         capa2Areas={capa2Areas}
+        userHabits={userHabits}
       />
     );
   }

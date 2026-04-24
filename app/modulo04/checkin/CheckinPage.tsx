@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { selectReflectionQuestion } from "@/lib/modulo04/checkinContext";
 import {
   HABIT_GROUP_LABEL,
@@ -123,7 +123,21 @@ export default function CheckinPage({
   // Modo derivado: si no está listo el setup, forzamos modo setup.
   // Si el usuario oprime ✎, entra en "edit". Si oprime "Listo", vuelve a "checkin".
   const [editing, setEditing] = useState(false);
-  const mode: Mode = !setupComplete ? "setup" : editing ? "edit" : "checkin";
+  // Evita que la vista "salte" de setup → checkin en cuanto el usuario tenga
+  // 1 hábito por grupo. Para usuarios nuevos, esperamos a que pulsen
+  // explícitamente "EMPEZAR CHECK-IN →" (útil si quieren seguir agregando más
+  // hábitos mentales, espirituales o físicos antes de salir del setup).
+  // Los que regresan — ya tienen hábitos configurados desde la primera vez —
+  // entran directo a la vista de check-in.
+  const [hasStartedCheckin, setHasStartedCheckin] = useState<boolean>(
+    initialUserHabits.length > 0,
+  );
+  const mode: Mode =
+    !setupComplete || !hasStartedCheckin
+      ? "setup"
+      : editing
+        ? "edit"
+        : "checkin";
 
   const completedMissions = missions.filter((m) => m.markedAt !== null);
   const completedCoreToday = completedMissions.some((m) => m.isCore);
@@ -192,7 +206,6 @@ export default function CheckinPage({
   }
 
   // Handlers de edición / setup
-  const [pending, startTransition] = useTransition();
   const [habitError, setHabitError] = useState<string | null>(null);
 
   async function handleAddHabit(
@@ -202,7 +215,6 @@ export default function CheckinPage({
   ): Promise<void> {
     const trimmed = label.trim();
     if (!trimmed) return;
-    // eslint-disable-next-line no-console
     console.log("[EIDOS] addUserHabitAction →", {
       groupKey,
       label: trimmed,
@@ -213,7 +225,6 @@ export default function CheckinPage({
       label: trimmed,
       presetSlug,
     });
-    // eslint-disable-next-line no-console
     console.log("[EIDOS] addUserHabitAction ←", result);
     if (result.error) {
       setHabitError(result.error);
@@ -222,9 +233,12 @@ export default function CheckinPage({
     if (result.habit) {
       setHabitError(null);
       const created = result.habit;
-      startTransition(() => {
-        setHabits((prev) => [...prev, created]);
-      });
+      // Actualizamos la lista local directamente — sin startTransition
+      // compartido entre grupos. El transition global hacía que agregar
+      // un hábito de Mental dejara "disabled" momentáneamente las otras
+      // chips del mismo grupo, dando la impresión de que solo se podía
+      // agregar uno a la vez.
+      setHabits((prev) => [...prev, created]);
     }
   }
   async function handleArchiveHabit(habitId: string): Promise<void> {
@@ -250,9 +264,9 @@ export default function CheckinPage({
         groupsReady={groupsReady}
         onAdd={handleAddHabit}
         onRemove={handleArchiveHabit}
-        pending={pending}
         canContinue={setupComplete}
         errorMessage={habitError}
+        onStartCheckin={() => setHasStartedCheckin(true)}
       />
     );
   }
@@ -393,7 +407,6 @@ export default function CheckinPage({
                   habits={list}
                   onAdd={handleAddHabit}
                   onRemove={handleArchiveHabit}
-                  pending={pending}
                 />
               ) : list.length === 0 ? (
                 <EmptyRow text="No hay hábitos en este grupo todavía." />
@@ -493,9 +506,9 @@ function SetupView({
   groupsReady,
   onAdd,
   onRemove,
-  pending,
   canContinue,
   errorMessage,
+  onStartCheckin,
 }: {
   todayDate: string;
   habitsByGroup: Record<HabitGroupKey, UserHabit[]>;
@@ -506,9 +519,9 @@ function SetupView({
     presetSlug: string | null,
   ) => Promise<void>;
   onRemove: (id: string) => Promise<void>;
-  pending: boolean;
   canContinue: boolean;
   errorMessage: string | null;
+  onStartCheckin: () => void;
 }) {
   // El CTA "Empezar check-in" recarga al modo checkin una vez que los 3 grupos
   // tengan ≥1 hábito. Como el modo se deriva del estado, simplemente forzamos
@@ -601,7 +614,6 @@ function SetupView({
               habits={habitsByGroup[groupKey]}
               onAdd={onAdd}
               onRemove={onRemove}
-              pending={pending}
             />
           </Section>
         ))}
@@ -615,9 +627,7 @@ function SetupView({
             disabled={!canContinue}
             className="w-full rounded-xl bg-[#F0EDE8] py-3 text-sm font-bold tracking-[0.14em] text-[#0D0D14] transition-opacity disabled:cursor-not-allowed disabled:bg-[#2A2A3A] disabled:text-[rgba(240,237,232,0.4)]"
             onClick={() => {
-              if (canContinue && typeof window !== "undefined") {
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }
+              if (canContinue) onStartCheckin();
             }}
           >
             {canContinue
@@ -637,7 +647,6 @@ function EditableGroup({
   habits,
   onAdd,
   onRemove,
-  pending,
 }: {
   groupKey: HabitGroupKey;
   habits: UserHabit[];
@@ -647,9 +656,11 @@ function EditableGroup({
     presetSlug: string | null,
   ) => Promise<void>;
   onRemove: (id: string) => Promise<void>;
-  pending: boolean;
 }) {
   const [custom, setCustom] = useState("");
+  // `adding` es LOCAL a cada EditableGroup — agregar un hábito mental
+  // ya no bloquea los otros grupos ni el resto de chips del mismo grupo,
+  // solo el botón "+" del input custom mientras esa llamada está en vuelo.
   const [adding, setAdding] = useState(false);
 
   const takenLabels = useMemo(
@@ -695,7 +706,6 @@ function EditableGroup({
             key={h.id}
             label={h.label}
             onRemove={() => void onRemove(h.id)}
-            disabled={pending || adding}
           />
         ))
       )}
@@ -707,9 +717,8 @@ function EditableGroup({
             <button
               key={s.slug}
               type="button"
-              disabled={pending || adding}
               onClick={() => void onAdd(s.groupKey, s.label, s.slug)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[#22D3EE]/40 bg-[#1A1A26] px-3 py-1.5 text-xs text-[#F0EDE8] transition-colors hover:border-[#22D3EE] hover:bg-[#22D3EE]/10 disabled:opacity-40"
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#22D3EE]/40 bg-[#1A1A26] px-3 py-1.5 text-xs text-[#F0EDE8] transition-colors hover:border-[#22D3EE] hover:bg-[#22D3EE]/10"
             >
               <span className="text-[#22D3EE]">+</span>
               {s.label}
@@ -731,13 +740,13 @@ function EditableGroup({
           }}
           maxLength={80}
           placeholder="Agregar propio…"
-          disabled={pending || adding}
+          disabled={adding}
           className="flex-1 rounded-lg border border-[#2A2A3A] bg-[#0D0D14] px-3 py-2 text-sm text-[#F0EDE8] placeholder-[rgba(240,237,232,0.3)] outline-none focus:border-[#22D3EE] disabled:opacity-60"
         />
         <button
           type="button"
           onClick={() => void submitCustom()}
-          disabled={!custom.trim() || adding || pending}
+          disabled={!custom.trim() || adding}
           className="rounded-lg bg-[#22D3EE] px-3 py-2 text-sm font-bold text-[#0D0D14] transition-opacity disabled:opacity-40"
         >
           +
@@ -861,11 +870,9 @@ function ReadonlyRow({ label, done }: { label: string; done: boolean }) {
 function RemovableRow({
   label,
   onRemove,
-  disabled,
 }: {
   label: string;
   onRemove: () => void;
-  disabled?: boolean;
 }) {
   return (
     <div className="flex items-center justify-between gap-3 rounded-xl border border-[#2A2A3A] bg-[#1A1A26] px-4 py-3">
@@ -873,9 +880,8 @@ function RemovableRow({
       <button
         type="button"
         onClick={onRemove}
-        disabled={disabled}
         aria-label={`Archivar ${label}`}
-        className="flex h-9 w-9 items-center justify-center rounded-lg text-base text-[rgba(240,237,232,0.5)] transition-colors hover:bg-[#2A2A3A] hover:text-[#EF4444] disabled:opacity-40"
+        className="flex h-9 w-9 items-center justify-center rounded-lg text-base text-[rgba(240,237,232,0.5)] transition-colors hover:bg-[#2A2A3A] hover:text-[#EF4444]"
       >
         ×
       </button>

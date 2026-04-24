@@ -4,12 +4,20 @@ import Link from "next/link";
 import { useEffect } from "react";
 import { XPBar } from "@/components/avatar/XPBar";
 import { buildDailyMissions } from "@/lib/modulo04/missions";
+import {
+  HABIT_GROUP_LABEL,
+  HABIT_GROUP_ORDER,
+} from "@/lib/modulo04/habitPresets";
 import { registerAttack, saveBossHp } from "@/lib/supabase/boss";
 import { useBossStore } from "@/store/bossStore";
 import { useDailyStore } from "@/store/dailyStore";
 import { useEffectsStore } from "@/store/effectsStore";
 import type { Boss } from "@/types/boss";
-import type { DailyMission } from "@/types/modulo04";
+import type {
+  DailyMission,
+  HabitGroupKey,
+  UserHabit,
+} from "@/types/modulo04";
 import type { RutinaBase, SprintCommitment } from "@/types/modulo03";
 import type { Capa2AreaStatus } from "@/lib/modulo01/capa2-types";
 
@@ -20,6 +28,7 @@ interface CampoBaseProps {
   rutinaBase: RutinaBase | null;
   sprintCommitments: SprintCommitment[];
   capa2Areas?: Capa2AreaStatus[];
+  userHabits?: UserHabit[];
 }
 
 export default function CampoBase({
@@ -29,6 +38,7 @@ export default function CampoBase({
   rutinaBase,
   sprintCommitments,
   capa2Areas = [],
+  userHabits = [],
 }: CampoBaseProps) {
   const { activeBoss, setActiveBoss, applyDamage } = useBossStore();
   const { missions, setMissions, markMission, checkinClosed } = useDailyStore();
@@ -77,6 +87,16 @@ export default function CampoBase({
   // Capa 2 completa = 5 áreas con completedAt. Si no, mostramos CTA.
   const capa2Completas = capa2Areas.filter((a) => a.completedAt != null).length;
   const capa2Pendiente = capa2Completas < 5;
+
+  // Desglose de hábitos activos por grupo — refleja lo que el usuario
+  // configuró en el check-in + lo que ha adoptado desde el mapa.
+  const habitsByGroup: Record<HabitGroupKey, number> = {
+    fisicos: 0,
+    espirituales: 0,
+    mentales: 0,
+  };
+  for (const h of userHabits) habitsByGroup[h.groupKey]++;
+  const totalHabits = userHabits.length;
 
   async function handleAttack(mission: DailyMission) {
     if (mission.markedAt) return;
@@ -253,6 +273,43 @@ export default function CampoBase({
             </ul>
           )}
         </section>
+
+        {/* Hábitos activos — configurados en check-in o adoptados desde el mapa */}
+        {totalHabits > 0 && (
+          <section className="space-y-3 rounded-xl border border-[#2A2A3A] bg-[#1A1A26] p-5">
+            <div className="flex items-baseline justify-between gap-3">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-[#22D3EE]">
+                Tus hábitos diarios
+              </h3>
+              <Link
+                href="/modulo04/checkin"
+                className="text-[11px] font-medium text-[rgba(240,237,232,0.55)] underline hover:text-[#F0EDE8]"
+              >
+                Gestionar
+              </Link>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {HABIT_GROUP_ORDER.map((g) => (
+                <div
+                  key={g}
+                  className="rounded-lg border border-[rgba(240,237,232,0.08)] bg-[#0D0D14] px-3 py-2"
+                >
+                  <p className="text-[10px] uppercase tracking-wider text-[rgba(240,237,232,0.45)]">
+                    {HABIT_GROUP_LABEL[g]}
+                  </p>
+                  <p className="mt-1 text-lg font-semibold text-[#F0EDE8]">
+                    {habitsByGroup[g]}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <p className="text-[11px] text-[rgba(240,237,232,0.45)]">
+              {totalHabits} hábito{totalHabits === 1 ? "" : "s"} activo
+              {totalHabits === 1 ? "" : "s"} · se marcan durante el check-in
+              nocturno.
+            </p>
+          </section>
+        )}
 
         {/* CTA check-in nocturno */}
         {!checkinClosed && (

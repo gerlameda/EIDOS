@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -164,6 +165,18 @@ export function AuthForm({ variant }: AuthFormProps) {
           >
             {loading ? "Cargando…" : buttonLabel}
           </button>
+
+          {variant === "login" ? (
+            <div className="pt-2 text-center">
+              <Link
+                href="/forgot-password"
+                className="text-xs underline transition-colors hover:text-[#22D3EE]"
+                style={{ color: "rgba(240,237,232,0.55)" }}
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
+          ) : null}
         </form>
       </div>
     </main>

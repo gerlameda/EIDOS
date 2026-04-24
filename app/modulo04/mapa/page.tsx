@@ -3,6 +3,7 @@ import { getGlobalScore, getUnifiedAreaScores } from "@/lib/modulo01/area-scores
 import type { Capa2AreaStatus } from "@/lib/modulo01/capa2-types";
 import type { Capa1AreaAnswer } from "@/lib/modulo01/capa1-flow-data";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getUserHabits } from "@/lib/supabase/userHabits";
 import MapaClient from "./MapaClient";
 
 export default async function MapaPage() {
@@ -28,5 +29,21 @@ export default async function MapaPage() {
   const unified = getUnifiedAreaScores(capa1Saved, capa2Areas);
   const globalScore = getGlobalScore(unified);
 
-  return <MapaClient unifiedScores={unified} globalScore={globalScore} />;
+  // Hábitos que ya tiene el usuario (label + group). Sirven para que el mapa
+  // pinte como "✓ Adoptada" cualquier misión cuyo título ya esté en su lista,
+  // incluso si la adoptó en una sesión anterior (el estado local se resetea
+  // al navegar y sin esto todas aparecerían como "Adoptar" de nuevo).
+  const existingHabits = await getUserHabits(user.id, supabase);
+  const adoptedLabels = existingHabits.map((h) => ({
+    label: h.label,
+    groupKey: h.groupKey,
+  }));
+
+  return (
+    <MapaClient
+      unifiedScores={unified}
+      globalScore={globalScore}
+      adoptedLabels={adoptedLabels}
+    />
+  );
 }

@@ -15,6 +15,7 @@ import {
   type AreaMission,
 } from "@/lib/modulo04/areaMissions";
 import { addUserHabitAction } from "@/app/modulo04/actions";
+import type { HabitGroupKey } from "@/types/modulo04";
 
 const AREA_CONFIG: Record<
   Modulo02Area,
@@ -57,6 +58,9 @@ function scoreForArea(unified: AreaScore[], key: Modulo02Area): number {
 type MapaClientProps = {
   unifiedScores: AreaScore[];
   globalScore: number | null;
+  /** (label, groupKey) de cada hábito activo del usuario — usado para
+   * reflejar qué misiones ya están adoptadas aunque se navegue fuera. */
+  adoptedLabels: { label: string; groupKey: HabitGroupKey }[];
 };
 
 /** Pares de áreas conectadas en el SVG (índices en AREA_ORDER). */
@@ -73,10 +77,35 @@ const SVG_EDGES: [Modulo02Area, Modulo02Area][] = [
 export default function MapaClient({
   unifiedScores,
   globalScore,
+  adoptedLabels,
 }: MapaClientProps) {
   const [sheetArea, setSheetArea] = useState<Modulo02Area | null>(null);
   const [sheetEnter, setSheetEnter] = useState(false);
-  const [adoptedIds, setAdoptedIds] = useState<Set<string>>(new Set());
+  // Normalizamos las etiquetas adoptadas a una key estable (`group::title`)
+  // para comparar contra las misiones del catálogo.
+  const adoptedKeySet = useMemo(
+    () =>
+      new Set(
+        adoptedLabels.map(
+          (h) => `${h.groupKey}::${h.label.trim().toLowerCase()}`,
+        ),
+      ),
+    [adoptedLabels],
+  );
+  const initialAdoptedIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const area of AREA_ORDER) {
+      for (const tier of ["ruinas", "desarrollo", "iluminada"] as const) {
+        for (const m of getMissionsForArea(area, tier)) {
+          if (!m.habitGroup) continue;
+          const key = `${m.habitGroup}::${m.title.trim().toLowerCase()}`;
+          if (adoptedKeySet.has(key)) set.add(m.id);
+        }
+      }
+    }
+    return set;
+  }, [adoptedKeySet]);
+  const [adoptedIds, setAdoptedIds] = useState<Set<string>>(initialAdoptedIds);
   const [adoptErrors, setAdoptErrors] = useState<Record<string, string>>({});
   const [isAdopting, startAdopt] = useTransition();
 
@@ -95,25 +124,31 @@ export default function MapaClient({
     window.setTimeout(() => setSheetArea(null), 300);
   }, []);
 
-  const adoptMission = useCallback((mission: AreaMission) => {
-    if (!mission.habitGroup) return; // one-shots no se adoptan como hábito
-    setAdoptErrors((prev) => {
-      const next = { ...prev };
-      delete next[mission.id];
-      return next;
-    });
-    startAdopt(async () => {
-      const res = await addUserHabitAction({
-        groupKey: mission.habitGroup!,
-        label: mission.title,
+  const adoptMission = useCallback(
+    (mission: AreaMission) => {
+      if (!mission.habitGroup) return; // one-shots no se adoptan como hábito
+      // Si ya está adoptada (sea por esta sesión o por una persistida desde
+      // el servidor), no volvemos a insertar — evita duplicados en la DB.
+      if (adoptedIds.has(mission.id)) return;
+      setAdoptErrors((prev) => {
+        const next = { ...prev };
+        delete next[mission.id];
+        return next;
       });
-      if (res.habit) {
-        setAdoptedIds((prev) => new Set(prev).add(mission.id));
-      } else if (res.error) {
-        setAdoptErrors((prev) => ({ ...prev, [mission.id]: res.error! }));
-      }
-    });
-  }, []);
+      startAdopt(async () => {
+        const res = await addUserHabitAction({
+          groupKey: mission.habitGroup!,
+          label: mission.title,
+        });
+        if (res.habit) {
+          setAdoptedIds((prev) => new Set(prev).add(mission.id));
+        } else if (res.error) {
+          setAdoptErrors((prev) => ({ ...prev, [mission.id]: res.error! }));
+        }
+      });
+    },
+    [adoptedIds],
+  );
 
   const areaRows = useMemo(
     () =>

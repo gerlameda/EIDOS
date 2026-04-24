@@ -164,7 +164,9 @@ export async function addUserHabitAction(payload: {
     },
     supabase,
   );
-  if (result.habit) revalidatePath("/modulo04/checkin");
+  // Revalidamos TODO el módulo: check-in lo usa para listar, el mapa para
+  // reflejar "Adoptada", y el dashboard para mostrar el contador de hábitos.
+  if (result.habit) revalidatePath("/modulo04", "layout");
   return result;
 }
 
@@ -176,7 +178,7 @@ export async function archiveUserHabitAction(habitId: string): Promise<boolean> 
   if (!user) redirect("/login");
 
   const ok = await archiveUserHabit(user.id, habitId, supabase);
-  if (ok) revalidatePath("/modulo04/checkin");
+  if (ok) revalidatePath("/modulo04", "layout");
   return ok;
 }
 
