@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { selectReflectionQuestion } from "@/lib/modulo04/checkinContext";
 import {
   HABIT_GROUP_LABEL,
   HABIT_GROUP_ORDER,
@@ -93,15 +92,13 @@ export default function CheckinPage({
 
   const {
     missions,
-    reflectionAnswer,
-    setReflectionAnswer,
     checkinClosed,
     setCheckinClosed,
     habitStatuses,
     setHabitStatus,
     hydrateHabitStatuses,
   } = useDailyStore();
-  const { activeBoss, streakDays, incrementStreak } = useBossStore();
+  const { incrementStreak } = useBossStore();
 
   /** IDs que el usuario respondió "sí" hoy — lo que se persiste en Supabase. */
   const habitIdsCompleted = useMemo(
@@ -140,7 +137,6 @@ export default function CheckinPage({
         : "checkin";
 
   const completedMissions = missions.filter((m) => m.markedAt !== null);
-  const completedCoreToday = completedMissions.some((m) => m.isCore);
 
   // Hidratamos el store con lo que venga de Supabase (solo una vez).
   useEffect(() => {
@@ -149,31 +145,6 @@ export default function CheckinPage({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const physicalHabitsCompleted = useMemo(() => {
-    const ids = new Set(habitIdsCompleted);
-    return habitsByGroup.fisicos.filter((h) => ids.has(h.id)).length;
-  }, [habitsByGroup.fisicos, habitIdsCompleted]);
-
-  const reflectionQuestion = useMemo(
-    () =>
-      selectReflectionQuestion({
-        bossPhase: activeBoss?.phase ?? "intimidando",
-        missionsCompleted: completedMissions.length,
-        totalMissions: missions.length,
-        streakDays,
-        physicalHabitsCompleted,
-        completedCoreToday,
-      }),
-    [
-      activeBoss?.phase,
-      completedMissions.length,
-      missions.length,
-      streakDays,
-      physicalHabitsCompleted,
-      completedCoreToday,
-    ],
-  );
 
   const [saving, setSaving] = useState(false);
   const completedSet = useMemo(
@@ -194,8 +165,11 @@ export default function CheckinPage({
         date: todayDate,
         habitsCompleted: completedMissions.map((m) => m.key),
         habitIdsCompleted,
-        reflectionQuestion,
-        reflectionAnswer: reflectionAnswer || null,
+        // La reflexión vive en el journal — ya no la pedimos en el check-in,
+        // pero mantenemos los campos en el payload por compatibilidad del
+        // schema en Supabase (no queremos romper rows viejos).
+        reflectionQuestion: "",
+        reflectionAnswer: null,
       });
       if (!ok) return;
       incrementStreak();
@@ -371,7 +345,8 @@ export default function CheckinPage({
           </h2>
           {mode === "edit" ? (
             <p className="mt-2 text-sm text-[rgba(240,237,232,0.6)]">
-              Agrega de las sugerencias o escribe el tuyo. Toca × para archivar.
+              Selecciona cuáles quieres agregar a tu check-in para monitoreo
+              diario. Toca × para archivar los que ya no uses.
             </p>
           ) : null}
         </div>
@@ -424,25 +399,6 @@ export default function CheckinPage({
             </Section>
           );
         })}
-
-        {/* Sección: Reflexión (solo en checkin mode) */}
-        {mode === "checkin" ? (
-          <Section title="REFLEXIÓN">
-            <div className="rounded-xl border border-[#2A2A3A] bg-[#1A1A26] p-4">
-              <p className="text-sm italic text-[rgba(240,237,232,0.8)]">
-                {`"${reflectionQuestion}"`}
-              </p>
-              <textarea
-                value={reflectionAnswer}
-                onChange={(e) => setReflectionAnswer(e.target.value)}
-                placeholder={readOnly ? "" : "Escribe aquí..."}
-                rows={4}
-                disabled={readOnly}
-                className="mt-3 w-full rounded-lg border border-[#2A2A3A] bg-[#0D0D14] px-3 py-2 text-sm text-[#F0EDE8] placeholder-[rgba(240,237,232,0.3)] outline-none focus:border-[#22D3EE] disabled:opacity-60"
-              />
-            </div>
-          </Section>
-        ) : null}
 
         {/* Resumen compacto cuando ya cerraste */}
         {readOnly ? (
@@ -554,8 +510,9 @@ function SetupView({
             Define los hábitos de tu check-in
           </h2>
           <p className="mt-2 text-sm text-[rgba(240,237,232,0.7)]">
-            Elige al menos uno por grupo. Puedes sumar más (o quitar) cuando
-            quieras desde el ícono ✎.
+            Selecciona cuáles quieres agregar a tu check-in para monitoreo
+            diario. Necesitas al menos uno por grupo — puedes sumar o quitar
+            después desde el ícono ✎.
           </p>
 
           {/* Progress */}
