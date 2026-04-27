@@ -8,6 +8,10 @@ import {
   deleteAgendaEvent,
   updateAgendaEvent,
 } from "@/lib/supabase/agenda";
+import {
+  sanitizeOptionalUserInput,
+  sanitizeUserInput,
+} from "@/lib/utils/sanitize";
 import type { AgendaEvent, AgendaEventInput } from "@/types/agenda";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -16,7 +20,7 @@ const TIME_RE = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
 function validate(
   input: AgendaEventInput,
 ): { ok: true; value: AgendaEventInput } | { ok: false; error: string } {
-  const title = input.title.trim();
+  const title = sanitizeUserInput(input.title);
   if (!title) return { ok: false, error: "El título no puede estar vacío." };
   if (title.length > 200)
     return { ok: false, error: "Máximo 200 caracteres." };
@@ -42,11 +46,11 @@ function validate(
     };
   }
 
-  // Normaliza tags (trim + dedupe, descarta vacíos).
+  // Normaliza tags (sanitize + dedupe, descarta vacíos).
   const tags = Array.from(
     new Set(
       (input.tags ?? [])
-        .map((t) => t.trim())
+        .map((t) => sanitizeUserInput(t))
         .filter((t) => t.length > 0 && t.length <= 40),
     ),
   );
@@ -60,7 +64,7 @@ function validate(
       startTime: input.startTime,
       endTime: input.endTime,
       tags,
-      notes: input.notes?.trim() || null,
+      notes: sanitizeOptionalUserInput(input.notes),
     },
   };
 }

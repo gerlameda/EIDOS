@@ -8,6 +8,10 @@ import {
   archiveUserHabit,
 } from "@/lib/supabase/userHabits";
 import { normalizeNombreUsuario } from "@/lib/onboarding/normalize";
+import {
+  sanitizeOptionalUserInput,
+  sanitizeUserInput,
+} from "@/lib/utils/sanitize";
 import type { Boss } from "@/types/boss";
 import type { HabitGroupKey, UserHabit } from "@/types/modulo04";
 
@@ -24,23 +28,22 @@ export async function createBossAction(
     .from("eidos_bosses")
     .insert({
       user_id: user.id,
-      name: proposal.name,
+      name: sanitizeUserInput(proposal.name),
       max_hp: proposal.maxHp,
       current_hp: proposal.currentHp,
       phase: proposal.phase,
       deadline: proposal.deadline,
-      area_focus: proposal.areaFocus,
-      core_attack: proposal.coreAttack,
-      taunt_intimidando: proposal.tauntPhrases.intimidando,
-      taunt_herido: proposal.tauntPhrases.herido,
-      taunt_desesperado: proposal.tauntPhrases.desesperado,
+      area_focus: sanitizeUserInput(proposal.areaFocus),
+      core_attack: sanitizeUserInput(proposal.coreAttack),
+      taunt_intimidando: sanitizeUserInput(proposal.tauntPhrases.intimidando),
+      taunt_herido: sanitizeUserInput(proposal.tauntPhrases.herido),
+      taunt_desesperado: sanitizeUserInput(proposal.tauntPhrases.desesperado),
       defeated: false,
     })
     .select("*")
     .single();
 
   if (error || !data) {
-    // eslint-disable-next-line no-console
     console.error("createBossAction error:", error);
     return null;
   }
@@ -86,14 +89,13 @@ export async function upsertCheckinAction(payload: {
       date: payload.date,
       habits_completed: payload.habitsCompleted,
       habit_ids_completed: payload.habitIdsCompleted,
-      reflection_question: payload.reflectionQuestion,
-      reflection_answer: payload.reflectionAnswer,
+      reflection_question: sanitizeUserInput(payload.reflectionQuestion),
+      reflection_answer: sanitizeOptionalUserInput(payload.reflectionAnswer),
     },
     { onConflict: "user_id,date" },
   );
 
   if (error) {
-    // eslint-disable-next-line no-console
     console.error("upsertCheckinAction error:", error);
     return false;
   }
@@ -114,7 +116,8 @@ export async function saveProfileNombreAction(
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const nombre = normalizeNombreUsuario(rawNombre);
+  // Strip HTML primero, luego normaliza (mayúscula inicial, etc).
+  const nombre = normalizeNombreUsuario(sanitizeUserInput(rawNombre));
   if (!nombre) {
     return { ok: false, error: "Escribe al menos un nombre.", nombre: null };
   }
@@ -152,7 +155,7 @@ export async function addUserHabitAction(payload: {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const label = payload.label.trim();
+  const label = sanitizeUserInput(payload.label);
   if (!label) return { habit: null, error: "El nombre no puede estar vacío." };
 
   const result = await addUserHabit(
@@ -200,9 +203,9 @@ export async function saveJournalAction(payload: {
     {
       user_id: user.id,
       date: payload.date,
-      content: payload.content,
-      one_word: payload.oneWord,
-      intention_tomorrow: payload.intentionTomorrow,
+      content: sanitizeOptionalUserInput(payload.content),
+      one_word: sanitizeOptionalUserInput(payload.oneWord),
+      intention_tomorrow: sanitizeOptionalUserInput(payload.intentionTomorrow),
       boss_id: payload.bossId,
       streak_day: payload.streakDay,
     },
@@ -210,7 +213,6 @@ export async function saveJournalAction(payload: {
   );
 
   if (error) {
-    // eslint-disable-next-line no-console
     console.error("saveJournalAction error:", error);
     return false;
   }
