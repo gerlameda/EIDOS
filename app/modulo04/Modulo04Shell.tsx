@@ -63,7 +63,7 @@ export default function Modulo04Shell({
             {editing ? (
               <div className="flex flex-col gap-1.5">
                 <p className="text-[10px] uppercase tracking-wider text-[#22D3EE]">
-                  Tu nombre
+                  Tu nombre de héroe
                 </p>
                 <div className="flex items-center gap-2">
                   <input

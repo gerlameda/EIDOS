@@ -36,8 +36,11 @@ export function Step4Nombre() {
     <div className="flex flex-1 flex-col justify-center">
       <div className="mx-auto w-full max-w-md text-center md:text-left">
         <h1 className="text-2xl font-semibold text-text-primary md:text-3xl">
-          ¿Cuál es tu nombre, jugador?
+          ¿Cuál es tu nombre de héroe?
         </h1>
+        <p className="mt-3 text-sm text-text-muted">
+          Así te llamará Eidos a lo largo del viaje.
+        </p>
         <input
           type="text"
           autoComplete="name"
@@ -50,8 +53,8 @@ export function Step4Nombre() {
               continuar();
             }
           }}
-          className="mt-10 w-full rounded-lg border border-text-muted/40 bg-bg-base px-4 py-3 text-center text-lg text-text-primary outline-none transition-colors focus:border-accent-cyan md:text-left"
-          placeholder="Tu nombre"
+          className="mt-8 w-full rounded-lg border border-text-muted/40 bg-bg-base px-4 py-3 text-center text-lg text-text-primary outline-none transition-colors focus:border-accent-cyan md:text-left"
+          placeholder="Tu nombre de héroe"
         />
         <button
           type="button"
