@@ -188,6 +188,10 @@ export default function DashboardPage() {
           >
             ⚔️ Mi Juego →
           </Link>
+          <p className="mt-3 text-center text-xs leading-relaxed text-text-muted">
+            Ya puedes entrar a tu campo base, pero EIDOS aún no puede armar tu
+            ruta crítica hasta que termines de desarrollar tu perfil.
+          </p>
         </section>
       </div>
     </main>
