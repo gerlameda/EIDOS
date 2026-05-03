@@ -40,10 +40,30 @@ export const useSyncStatusStore = create<SyncStatusState>((set, get) => ({
   retryLast: async () => {
     const payload = get().lastFailedPayload;
     if (!payload) return;
-    // Import dinámico para evitar ciclos (sync-profile usa este store).
-    const { syncProfileToSupabase } = await import(
-      "@/lib/onboarding/sync-profile"
-    );
-    await syncProfileToSupabase(payload);
+
+    set({ isSyncing: true });
+
+    try {
+      // Resolvemos el userId directamente para no depender de syncProfileToSupabase,
+      // que silencia el error cuando no hay sesión (llama clearError si !user).
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        set({
+          isSyncing: false,
+          lastError: "Sin sesión activa — inicia sesión para guardar tu progreso.",
+        });
+        return;
+      }
+
+      const { saveProfileToSupabase } = await import("@/lib/supabase/profile");
+      const { useOnboardingStore } = await import("@/store/onboardingStore");
+      await saveProfileToSupabase(user.id, useOnboardingStore.getState());
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error desconocido";
+      set({ isSyncing: false, lastError: msg });
+    }
   },
 }));

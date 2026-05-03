@@ -57,6 +57,8 @@ export async function saveProfileToSupabase(
   const statusStore = useSyncStatusStore.getState();
   statusStore.setSyncing(true);
 
+  console.log("[EIDOS] saveProfileToSupabase → start", { userId, nombre: state.nombre });
+
   try {
     const { error } = await supabase.from("eidos_profiles").upsert(
       {
@@ -82,7 +84,7 @@ export async function saveProfileToSupabase(
       const msg = `Supabase upsert: ${error.message}${
         error.code ? ` (${error.code})` : ""
       }`;
-      console.error("saveProfileToSupabase upsert failed", {
+      console.log("[EIDOS] saveProfileToSupabase → ERROR", {
         message: error.message,
         code: error.code,
         details: error.details,
@@ -92,10 +94,11 @@ export async function saveProfileToSupabase(
       return;
     }
 
+    console.log("[EIDOS] saveProfileToSupabase → OK", { userId });
     statusStore.clearError();
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
-    console.error("saveProfileToSupabase threw", err);
+    console.log("[EIDOS] saveProfileToSupabase → THREW", err);
     statusStore.setError(msg, state);
   } finally {
     statusStore.setSyncing(false);
