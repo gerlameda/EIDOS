@@ -1,8 +1,7 @@
 "use client";
-
 import { useEffect } from "react";
 import { useOnboardingNavRegistration } from "@/components/onboarding/onboarding-nav-context";
-import { GoogleAuthButton } from "@/components/auth/GoogleAuthButton";
+import { EmailAuthForm } from "@/components/auth/EmailAuthForm";
 
 export function Step3Auth() {
   const { setHandlers } = useOnboardingNavRegistration();
@@ -19,10 +18,10 @@ export function Step3Auth() {
           Empieza tu juego.
         </h1>
         <p className="mt-6 text-sm text-text-muted">
-          Guarda tu progreso con tu cuenta de Google.
+          Guarda tu progreso con tu cuenta.
         </p>
         <div className="mt-8">
-          <GoogleAuthButton label="Continuar con Google →" />
+          <EmailAuthForm />
         </div>
       </div>
     </div>
