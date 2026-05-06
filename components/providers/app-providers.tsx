@@ -39,7 +39,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       apiKey={key}
       options={{
         api_host:
-          process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://us.i.posthog.com",
+          process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://us.posthog.com",
         capture_pageview: false,
         persistence: "localStorage",
       }}
